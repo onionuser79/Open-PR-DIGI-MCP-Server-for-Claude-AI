@@ -41,10 +41,13 @@ The functional bar: a new operator can point the server at their own nodes —
 
 ## Tier 2 — polished public release
 
-- ⬜ **CI** — GitHub Actions: ruff + mypy + pytest on 3.10–3.12.
-- ⬜ **Mock transport + integration test** — a fake (X)Net/BPQ server so the
-  connect→login→SYS→command path is tested end-to-end without real hardware
-  (the substitute for validating against a second real station).
+- ✅ **CI** — GitHub Actions (`.github/workflows/ci.yml`): ruff + mypy(src) +
+  pytest on Python 3.10 / 3.11 / 3.12 / 3.13.
+- ✅ **Mock transport + integration test** (`tests/test_integration_mock.py`) —
+  an in-process asyncio TCP server speaks a minimal (X)Net/BPQ protocol
+  (login → SYS/PASSWORD challenge → command → BYE); the transports drive it
+  over the **direct** path (no SSH, no hardware), covering connect→login→
+  elevate→command→disconnect + a wrong-password rejection case.
 - ⬜ **`CONTRIBUTING.md`** + issue/PR templates.
 - ⬜ **Generalize `DESIGN.md`** — rewrite the IW2OHX access-matrix framing into a
   generic architecture doc; keep IW2OHX as an example.

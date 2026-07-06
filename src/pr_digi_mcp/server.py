@@ -1095,7 +1095,7 @@ async def xnet_reset(
 async def xnet_sys_command(
     node: Annotated[
         str,
-        Field(description="(X)Net node as configured in nodes.yaml (incl. chained; escape-hatch only)"),
+        Field(description="(X)Net node from nodes.yaml (chained escape-hatch only)"),
     ],
     command: Annotated[str, Field(description="Literal command to run AFTER SYS elevation")],
     confirm: Annotated[

@@ -74,8 +74,8 @@ class XnetTransport:
         self._ssh: asyncssh.SSHClientConnection | None = None
         # asyncssh.open_connection returns SSH stream objects (not asyncio's),
         # but the subset we use (read/write/drain/close/is_closing) is shared.
-        self._reader: asyncssh.SSHReader[bytes] | None = None
-        self._writer: asyncssh.SSHWriter[bytes] | None = None
+        self._reader: asyncssh.SSHReader[bytes] | asyncio.StreamReader | None = None
+        self._writer: asyncssh.SSHWriter[bytes] | asyncio.StreamWriter | None = None
         self._sys_active: bool = False
         self._lock = asyncio.Lock()  # serialises send/receive on this session
 
