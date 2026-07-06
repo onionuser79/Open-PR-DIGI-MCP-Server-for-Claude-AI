@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation (README / DESIGN / CONTRIBUTING)
+    url: https://github.com/onionuser79/Open-PR-DIGI-MCP-Server-for-Claude-AI#readme
+    about: Setup, architecture, and how to contribute — please skim before opening an issue.

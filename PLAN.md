@@ -56,10 +56,11 @@ The functional bar: a new operator can point the server at their own nodes —
 - ✅ **`DESIGN.md`** — generic architecture doc (stack, node/config model, direct-vs-SSH
   connectivity, transports, auth & credentials, safety gate, security, extending, testing);
   IW2OHX kept only as a §12 reference-deployment example.
-- ⬜ Issue/PR templates (minor).
+- ✅ **Issue/PR templates** — `.github/ISSUE_TEMPLATE/` (bug report, node-compatibility
+  with sanitised-transcript ask, feature request, chooser config) + `pull_request_template.md`.
 
-Tier-2 is otherwise **complete** — the project is fully usable via the git-URL
-install in the README.
+Tier-2 is **complete** — the project is fully usable via the git-URL install in
+the README.
 
 ### Optional (reach, not a gap)
 - ⬜ **Publish to PyPI** — enables `pipx install pr-digi-mcp` and PyPI-search
