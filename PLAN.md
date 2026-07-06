@@ -65,6 +65,13 @@ The functional bar: a new operator can point the server at their own nodes —
 - ⬜ Aggregation tools across all configured nodes (network-wide topology, route
   search, link-quality history).
 - ⬜ Multi-hop AX.25 chains (currently single-hop `xnet_chained`).
+- ⬜ **Authenticated remote access.** Today the server is **stdio-only with no
+  client-side authentication** — anyone who can launch the process inherits
+  access to every configured node's credentials. That fits the intended
+  single-operator, local model. For remote or multi-user use it would need an
+  authenticated HTTP/SSE transport in front (e.g. bearer token / OAuth, per-user
+  scoping, and TLS). Until then, do **not** expose the server beyond the local
+  host.
 
 ---
 
