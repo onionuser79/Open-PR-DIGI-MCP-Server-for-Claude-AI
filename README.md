@@ -88,5 +88,6 @@ This tool can send **sysop-level commands to live amateur-radio infrastructure**
 ## Credits
 
 Developed for the **IW2OHX** digital station (the reference deployment) and
-generalized for anyone to run. Contributions welcome — see [PLAN.md](PLAN.md)
-for the roadmap.
+generalized for anyone to run. See [DESIGN.md](DESIGN.md) for the architecture,
+[CONTRIBUTING.md](CONTRIBUTING.md) to get involved, and [PLAN.md](PLAN.md) for
+the roadmap.

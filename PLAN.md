@@ -53,8 +53,9 @@ The functional bar: a new operator can point the server at their own nodes —
 - ✅ **Client config examples** — `docs/mcp-clients.md` + `examples/claude_desktop_config.json`
   (Claude Desktop + Claude Code, stdio).
 - ✅ **Tagged release `v0.1.0`** — annotated git tag + GitHub release.
-- ⬜ **Generalize `DESIGN.md`** — rewrite the IW2OHX access-matrix framing into a
-  generic architecture doc; keep IW2OHX as an example. (Not yet present in this repo.)
+- ✅ **`DESIGN.md`** — generic architecture doc (stack, node/config model, direct-vs-SSH
+  connectivity, transports, auth & credentials, safety gate, security, extending, testing);
+  IW2OHX kept only as a §12 reference-deployment example.
 - ⬜ **Publish to PyPI** (`pipx install pr-digi-mcp`).
 - ⬜ Issue/PR templates.
 
