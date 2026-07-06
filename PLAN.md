@@ -56,8 +56,18 @@ The functional bar: a new operator can point the server at their own nodes —
 - ✅ **`DESIGN.md`** — generic architecture doc (stack, node/config model, direct-vs-SSH
   connectivity, transports, auth & credentials, safety gate, security, extending, testing);
   IW2OHX kept only as a §12 reference-deployment example.
-- ⬜ **Publish to PyPI** (`pipx install pr-digi-mcp`).
-- ⬜ Issue/PR templates.
+- ⬜ Issue/PR templates (minor).
+
+Tier-2 is otherwise **complete** — the project is fully usable via the git-URL
+install in the README.
+
+### Optional (reach, not a gap)
+- ⬜ **Publish to PyPI** — enables `pipx install pr-digi-mcp` and PyPI-search
+  discoverability. **Not required:** the git-URL install documented in the README
+  is functionally identical, and the audience is small and technical. It also adds
+  overhead (PyPI account, an API-token CI secret, a free/unsquatted package name,
+  and publish discipline per release). Do this only if the `pipx` one-liner or
+  discoverability is specifically wanted — otherwise skip indefinitely.
 
 ## Tier 3 — capability breadth (optional, post-release)
 
