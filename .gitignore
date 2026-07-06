@@ -1,0 +1,30 @@
+# credentials — never commit
+credentials.yaml
+.env
+*.key
+*.pem
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+
+# state
+*.db
+*.sqlite
+*.sqlite3
+audit*.log
+state/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editors
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,51 @@
+# Example node inventory for pr-digi-mcp — copy to ~/.config/pr-digi-mcp/nodes.yaml
+# and edit for YOUR station. Passwords are NOT stored here (see credentials.yaml).
+#
+# Each node is keyed by its callsign. Supported `type` values:
+#   xnet          (X)Net / PC-Flexnet-family telnet node
+#   bpq | linbpq  BPQ32 (Windows) / LinBPQ (Linux) node
+#   xnet_chained  a node reachable only by `C <call>` from another node
+#
+# CONNECTIVITY: `ssh_host` is OPTIONAL.
+#   - set it  -> the telnet session is tunnelled through that SSH jump host
+#                (the SSH alias must exist in your ~/.ssh/config)
+#   - omit it -> connect DIRECTLY to telnet_host:telnet_port (same LAN, or a
+#                node reachable over HAMNET / AMPRNet / the Internet)
+
+nodes:
+
+  # --- Direct connection (no SSH jump): node reachable straight over TCP ---
+  N0CALL-7:
+    type: xnet
+    telnet_host: 192.0.2.10      # node IP or hostname
+    telnet_port: 23
+    user: youruser
+    sys_required: true           # true if a SYS/PASSWORD is needed for write tools
+    description: "(X)Net node — direct telnet"
+
+  # --- Via an SSH jump host (telnet tunnelled over SSH) ---
+  N0CALL-14:
+    type: xnet
+    ssh_host: my-gateway         # SSH alias in ~/.ssh/config
+    telnet_host: 44.0.0.2        # address reachable *from the jump host*
+    telnet_port: 23
+    user: youruser
+    sys_required: true
+    description: "(X)Net node — via SSH jump host"
+
+  # --- BPQ32 / LinBPQ node ---
+  N0CALL-1:
+    type: linbpq                 # or 'bpq' for BPQ32 on Windows
+    telnet_host: 127.0.0.1       # e.g. localhost if the MCP runs on the BPQ host
+    telnet_port: 2323
+    user: youruser
+    sys_required: true           # BPQ 'PASSWORD' elevation for sysop commands
+    description: "LinBPQ node"
+
+  # --- Chained node: reachable only via `C <call>` from a transit node ---
+  N0CALL-12:
+    type: xnet_chained
+    transit_via: N0CALL-14       # must be another (non-chained) node above
+    connect_command: "C N0CALL-12"
+    sys_required: true           # SYS pwd on the INNER node (see credentials.yaml)
+    description: "PC/Flexnet node — chained via N0CALL-14"

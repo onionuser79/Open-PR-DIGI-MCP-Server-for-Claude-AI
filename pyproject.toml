@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pr-digi-mcp"
+version = "0.1.0"
+description = "MCP server to operate packet-radio digipeater nodes ((X)Net, PC/Flexnet, BPQ32/LinBPQ) from Claude and other MCP clients"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Marco Di Martino (IW2OHX)"},
+]
+license = {text = "MIT"}
+keywords = ["mcp", "ham-radio", "packet-radio", "ax25", "bpq32", "linbpq", "xnet", "flexnet", "netrom"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Ham Radio",
+]
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "asyncssh>=2.14.0",
+    "pyyaml>=6.0",
+    "keyring>=24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/onionuser79/Open-PR-DIGI-MCP-Server-for-Claude-AI"
+Repository = "https://github.com/onionuser79/Open-PR-DIGI-MCP-Server-for-Claude-AI"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.1.0",
+    "mypy>=1.7",
+]
+
+[project.scripts]
+pr-digi-mcp = "pr_digi_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "B", "UP", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
