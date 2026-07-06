@@ -67,7 +67,9 @@ pr-digi-mcp
 ```
 
 Then point your MCP client (e.g. Claude Desktop / Claude Code) at the
-`pr-digi-mcp` command. Smoke-test a single node without an MCP client:
+`pr-digi-mcp` command — see [docs/mcp-clients.md](docs/mcp-clients.md) for
+ready-to-copy Claude Desktop / Claude Code configs. Smoke-test a single node
+without an MCP client:
 
 ```bash
 pr-digi-mcp test N0CALL-14        # connect + run a read-only command

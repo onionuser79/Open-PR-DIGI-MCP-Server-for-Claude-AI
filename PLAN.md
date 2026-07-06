@@ -48,11 +48,15 @@ The functional bar: a new operator can point the server at their own nodes —
   (login → SYS/PASSWORD challenge → command → BYE); the transports drive it
   over the **direct** path (no SSH, no hardware), covering connect→login→
   elevate→command→disconnect + a wrong-password rejection case.
-- ⬜ **`CONTRIBUTING.md`** + issue/PR templates.
+- ✅ **`CONTRIBUTING.md`** — dev setup, checks, testing (incl. "send a transcript"),
+  where-things-live, safety, licensing.
+- ✅ **Client config examples** — `docs/mcp-clients.md` + `examples/claude_desktop_config.json`
+  (Claude Desktop + Claude Code, stdio).
+- ✅ **Tagged release `v0.1.0`** — annotated git tag + GitHub release.
 - ⬜ **Generalize `DESIGN.md`** — rewrite the IW2OHX access-matrix framing into a
-  generic architecture doc; keep IW2OHX as an example.
-- ⬜ **Publish to PyPI** (`pipx install pr-digi-mcp`) + tagged `v0.1.0` release.
-- ⬜ **Client config examples** — Claude Desktop / Claude Code MCP snippets.
+  generic architecture doc; keep IW2OHX as an example. (Not yet present in this repo.)
+- ⬜ **Publish to PyPI** (`pipx install pr-digi-mcp`).
+- ⬜ Issue/PR templates.
 
 ## Tier 3 — capability breadth (optional, post-release)
 

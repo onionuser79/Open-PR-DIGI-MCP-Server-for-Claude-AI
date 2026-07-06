@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pr-digi": {
+      "command": "pr-digi-mcp",
+      "args": []
+    }
+  }
+}
