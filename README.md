@@ -88,6 +88,13 @@ This tool can send **sysop-level commands to live amateur-radio infrastructure**
 ## Credits
 
 Developed for the **IW2OHX** digital station (the reference deployment) and
-generalized for anyone to run. See [DESIGN.md](DESIGN.md) for the architecture,
-[CONTRIBUTING.md](CONTRIBUTING.md) to get involved, and [PLAN.md](PLAN.md) for
-the roadmap.
+generalized for anyone to run.
+
+**Docs:** [`docs/tools.md`](docs/tools.md) — supported node types + the full
+81-tool catalog · [`docs/onboarding-nodes.md`](docs/onboarding-nodes.md) —
+access prerequisites, credential storage, and how to onboard/offboard a node ·
+[DESIGN.md](DESIGN.md) — architecture · [CONTRIBUTING.md](CONTRIBUTING.md) ·
+[PLAN.md](PLAN.md) — roadmap.
+
+**Onboarding a node?** Ask Claude Code — the repo ships `onboard-pr-digi` and
+`offboard-pr-digi` skills (`.claude/skills/`) that drive it step by step.
