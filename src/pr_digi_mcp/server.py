@@ -61,12 +61,12 @@ import argparse
 import asyncio
 import logging
 import sys
-from typing import Annotated
+from typing import Annotated, Any
 
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
-from . import commands, safety
+from . import commands, parsers, safety
 from .config import NodeConfig, load_nodes
 from .transports import open_transport
 
@@ -1558,6 +1558,95 @@ async def _test_run(node: str, command: str, sys: bool, idle_ms: int) -> int:
         out = await xn.run_command(command, idle_ms=idle_ms)
     print(out)
     return 0
+
+
+# ── Aggregation across all configured nodes ──────────────────────────────────
+
+
+async def _collect_topology() -> dict[str, Any]:
+    """Query every node's neighbour/link table and return a per-node map."""
+
+    async def _one(name: str, cfg: NodeConfig) -> tuple[str, dict[str, Any]]:
+        try:
+            if cfg.type in _XNET_COMPATIBLE_TYPES:
+                raw = await _run_user(cfg, "L")
+                neighbours = parsers.to_dicts(parsers.parse_xnet_links(raw))
+            else:
+                raw = await _run_sys(cfg, "ROUTES")
+                neighbours = parsers.to_dicts(parsers.parse_bpq_routes(raw))
+            return name, {"type": cfg.type, "neighbours": neighbours}
+        except Exception as e:  # noqa: BLE001 - one node failing must not abort the sweep
+            return name, {"type": cfg.type, "error": str(e)}
+
+    results: list[tuple[str, dict[str, Any]]] = await asyncio.gather(
+        *(_one(n, c) for n, c in _NODES.items())
+    )
+    return {"nodes": dict(results)}
+
+
+async def _search_callsign(target: str) -> dict[str, Any]:
+    """Search every node's nodes/routes/links for `target` (upper-cased)."""
+
+    async def _one(name: str, cfg: NodeConfig) -> tuple[str, dict[str, Any]]:
+        try:
+            hits: list[dict[str, Any]] = []
+            if cfg.type in _XNET_COMPATIBLE_TYPES:
+                for ln in parsers.parse_xnet_links(await _run_user(cfg, "L")):
+                    if target in ln.callsign.upper():
+                        hits.append(
+                            {"where": "link", "callsign": ln.callsign,
+                             "dest_type": ln.dest_type}
+                        )
+            else:
+                for nd in parsers.parse_bpq_nodes(await _run_sys(cfg, "NODES")):
+                    if target in nd.callsign.upper() or target in nd.alias.upper():
+                        hits.append(
+                            {"where": "nodes", "alias": nd.alias, "callsign": nd.callsign}
+                        )
+                for rt in parsers.parse_bpq_routes(await _run_sys(cfg, "ROUTES")):
+                    if target in rt.callsign.upper():
+                        hits.append(
+                            {"where": "route", "callsign": rt.callsign,
+                             "port": rt.port, "quality": rt.quality}
+                        )
+            return name, {"type": cfg.type, "matches": hits}
+        except Exception as e:  # noqa: BLE001 - one node failing must not abort the sweep
+            return name, {"type": cfg.type, "error": str(e)}
+
+    results: list[tuple[str, dict[str, Any]]] = await asyncio.gather(
+        *(_one(n, c) for n, c in _NODES.items())
+    )
+    detail = dict(results)
+    found_on = [n for n, r in detail.items() if r.get("matches")]
+    return {"callsign": target, "found_on": found_on, "detail": detail}
+
+
+@mcp.tool()
+async def network_topology() -> dict[str, Any]:
+    """Aggregate the neighbour/link table of EVERY configured node.
+
+    Runs the fitting command per node type ((X)Net: ``L``; BPQ/LinBPQ:
+    ``ROUTES``), parses it into structured neighbours, and returns a per-node
+    map. Per-node failures are captured inline (never fatal). Note: this opens a
+    session to every configured node, so it can be slow; BPQ ``ROUTES`` elevates
+    to SYS.
+    """
+    return await _collect_topology()
+
+
+@mcp.tool()
+async def find_callsign(
+    callsign: Annotated[
+        str, Field(description="Callsign (or substring) to search for across all nodes")
+    ],
+) -> dict[str, Any]:
+    """Search every configured node for a callsign in its nodes/routes/links.
+
+    Reports which nodes reference the callsign and how (BPQ NODES alias table,
+    routes, or (X)Net link table), so you can see where it is reachable. Opens a
+    session to every node; BPQ queries elevate to SYS.
+    """
+    return await _search_callsign(callsign.strip().upper())
 
 
 def main() -> None:

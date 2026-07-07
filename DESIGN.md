@@ -35,6 +35,7 @@ knowledge in code**: the node inventory and secrets are entirely configuration.
 | `transports/chained.py` | AX.25 chained transport: outer → `C <inner>` → inner |
 | `transports/__init__.py` | `open_transport()` factory (type → transport class) |
 | `commands.py` | Command syntax tables + callsign validation |
+| `parsers.py` | Tolerant parsers: raw command text → typed records (JSON) |
 | `safety.py` | Dangerous-command classifier (the confirmation gate) |
 | `server.py` | MCP tool definitions + CLI (`serve` / `test`) |
 
@@ -182,6 +183,10 @@ Grouped in `server.py` (exact set evolves — see the tool list at runtime):
 - **Management (gated):** parameter get/set, node/route add-del, link reset,
   port & CMS control, persistence (`SAVEMH`/`SAVENODES`/`SENDNODES`), lifecycle.
 - **Meta:** `list_nodes` (from config), per-node version/identity.
+- **Aggregation (cross-node):** `network_topology` (merge every node's
+  neighbour/link table) and `find_callsign` (which nodes reference a callsign,
+  and how) — both parse output via `parsers.py` and capture per-node failures
+  inline rather than aborting the sweep.
 
 Tool parameter descriptions are generic ("as configured in nodes.yaml") — no
 station is baked into the schema.

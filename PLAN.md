@@ -74,9 +74,13 @@ the README.
 
 - ✅ **Optional-login nodes** — `login_required: false` skips the login/user/password
   exchange for open nodes (`user` then optional). Config + `_login()` + tests.
-- ⬜ Structured parsers (typed JSON for `L`/`D`/`NODES`) rather than raw text.
-- ⬜ Aggregation tools across all configured nodes (network-wide topology, route
-  search, link-quality history).
+- ✅ **Structured parsers** (`parsers.py`) — tolerant typed parsers for BPQ
+  ROUTES/NODES/LINKS, FlexNet FL links + D destinations, and (X)Net L rows;
+  `to_dicts()` for JSON. Real-output tests.
+- ✅ **Aggregation tools** — `network_topology()` (neighbour/link table of every
+  node, merged) and `find_callsign()` (which nodes reference a callsign, and how).
+  Per-node failures captured inline. ⬜ *link-quality **history*** still open — it
+  needs a time-series state store (a separate "state/history persistence" feature).
 - ✅ **Multi-hop AX.25 chains** — `transit_via` may point at another chained node;
   `config.resolve_chain()` resolves the base direct node + ordered `C …` path (cycles/
   dead-ends rejected). Transport walks the path hop-by-hop. Config + transport + tests.
