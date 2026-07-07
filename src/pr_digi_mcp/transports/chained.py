@@ -113,7 +113,7 @@ class Ax25ChainedTransport(XnetTransport):
         if self._sys_active:
             return
         async with self._lock:
-            await self._send_line("SYS")
+            await self._send_line(self.target_config.sys_command)
             challenge_buf = await self._read_until_idle(idle_ms=600, max_wait_s=10.0)
             sys_pwd = get_password(self.target_config.callsign, "sys")
             response = self._resolve_chained_sys_challenge(

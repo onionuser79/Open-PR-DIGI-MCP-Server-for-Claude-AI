@@ -75,6 +75,31 @@ def test_load_nodes_direct_no_ssh_host(tmp_path: Path) -> None:
     assert node.telnet_port == 23
     assert node.user == "youruser"
     assert node.sys_required is False
+    assert node.sys_command == "SYS"  # default keyword
+
+
+def test_load_nodes_sys_command(tmp_path: Path) -> None:
+    """sys_command defaults to SYS; a PC/Flexnet node can set SY."""
+    path = tmp_path / "nodes.yaml"
+    _write(
+        path,
+        """
+        nodes:
+          XN:
+            type: xnet
+            telnet_host: 1.1.1.1
+            telnet_port: 23
+            user: me
+          PCF:
+            type: xnet_chained
+            transit_via: XN
+            connect_command: "C PCF"
+            sys_command: SY
+        """,
+    )
+    nodes = load_nodes(path)
+    assert nodes["XN"].sys_command == "SYS"   # default
+    assert nodes["PCF"].sys_command == "SY"   # override on the chained target
 
 
 def test_load_nodes_missing_field_raises(tmp_path: Path) -> None:

@@ -42,6 +42,8 @@ connect from a transit node. **This is the only way to reach a PC/Flexnet node**
   so the target needs **no `user`** — only a `sys_pwd` if you want its write tools.
 - **Commands differ:** PC/Flexnet's command set is *not* (X)Net V1.39's — drive it
   with the `xnet_sys_command` tool using PC/Flexnet's own syntax (see `docs/tools.md`).
+- **Sysop keyword:** set `sys_command: SY` on a PC/Flexnet node so elevation sends
+  `SY` (the (X)Net default is `SYS`).
 
 **In all cases**, for the *write / sysop* tools you also need the node's **SYS**
 (or BPQ **PASSWORD**) secret. Read-only tools need only the login (model A/B) or

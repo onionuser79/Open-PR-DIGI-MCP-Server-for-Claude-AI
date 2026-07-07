@@ -166,7 +166,7 @@ class XnetTransport:
                 self.config.callsign,
             )
         async with self._lock:
-            await self._send_line("SYS")
+            await self._send_line(self.config.sys_command)
             challenge_buf = await self._read_until_idle(
                 idle_ms=500, max_wait_s=5.0
             )

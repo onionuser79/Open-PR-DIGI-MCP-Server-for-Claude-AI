@@ -69,7 +69,7 @@ def _make_handler(mode: str, login: bool = True) -> Handler:
                 if cmd == "BYE":
                     await send(b"73\r\n")
                     break
-                elif cmd == "SYS":  # (X)Net-style positional challenge
+                elif cmd in ("SYS", "SY"):  # (X)Net / PC-Flexnet positional challenge
                     await send(b"MOCK>  2 4 1 3 5\r\n")
                     resp = await _read_cr(reader) or b""
                     want = "".join(SYS_PWD[i - 1] for i in (2, 4, 1, 3, 5)).encode()
@@ -142,6 +142,19 @@ async def test_xnet_direct_sys_challenge(monkeypatch: pytest.MonkeyPatch) -> Non
             assert xn._sys_active is True
             # idempotent
             await xn.elevate_sys()
+
+
+async def test_sys_command_keyword_sy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A node with sys_command='SY' (PC/Flexnet) elevates with SY, not SYS."""
+    _patch_creds(monkeypatch)
+    async with _serve("xnet") as port:
+        cfg = NodeConfig(
+            callsign="PCF-1", type="xnet", sys_required=True, sys_command="SY",
+            ssh_host="", telnet_host="127.0.0.1", telnet_port=port, user="tester",
+        )
+        async with XnetTransport(cfg) as xn:
+            await xn.elevate_sys()
+            assert xn._sys_active is True
 
 
 async def test_xnet_sys_wrong_password_rejected(monkeypatch: pytest.MonkeyPatch) -> None:

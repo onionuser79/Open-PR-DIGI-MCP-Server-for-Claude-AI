@@ -59,6 +59,7 @@ then `./config/nodes.yaml`, then the packaged example). Each entry is a
 | `telnet_host`, `telnet_port` | direct-access | node endpoint |
 | `user` | direct-access | login callsign/name (required unless `login_required: false`) |
 | `login_required` | direct-access | default **true**; `false` = open node with no login prompt |
+| `sys_command` | all | sysop-auth keyword: `SYS` (default, (X)Net) / `SY` (PC/Flexnet); BPQ uses `PASSWORD` |
 | `ssh_host` | direct-access | **optional** SSH jump-host alias (see §4) |
 | `transit_via`, `connect_command` | `xnet_chained` | transit node (a direct node **or** another chained node → multi-hop) + its `C …` command |
 | `sys_required` | all | whether write tools need SYS/PASSWORD elevation |

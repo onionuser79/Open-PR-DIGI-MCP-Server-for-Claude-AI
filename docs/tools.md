@@ -94,10 +94,9 @@ table / path** (FlexNet's signature routing view) · `F <call>` find · `H` help
 | Services / procs / logs / files | `W` in-node text editor only | `SERVICE`/`PROCESSES`/`STATISTICS`/`LOG`, filesystem ops |
 | Hardware I/O / calibration | `CAL`, `IO` (RMNC hardware) | — |
 
-> **`SY` vs `SYS`:** the MCP's SYS elevation sends `SYS`; PC/Flexnet's documented
-> keyword is `SY`. FlexNet parsers usually match on the `SY` prefix (so `SYS` works),
-> but a per-node sysop-auth keyword is a candidate robustness enhancement — if your
-> PC/Flexnet build rejects `SYS`, flag it (see PLAN.md Tier-3).
+> **`SY` vs `SYS` — configurable:** the sysop-auth keyword is set **per node** via
+> `sys_command` in `nodes.yaml`. It defaults to `SYS` ((X)Net); set `sys_command: SY`
+> on a PC/Flexnet node so elevation sends `SY`. (BPQ is unaffected — it uses `PASSWORD`.)
 
 **Gate legend:** 🔒 = refuses to run unless `confirm=true` (human-approved);
 ⚠ = escape hatch, danger-classified per command.

@@ -48,6 +48,7 @@ nodes:
     transit_via: N0CALL-14       # must be another (non-chained) node above
     connect_command: "C N0CALL-12"
     sys_required: true           # SYS pwd on the INNER node (see credentials.yaml)
+    sys_command: SY              # PC/Flexnet enters sysop mode with SY (not SYS)
     description: "PC/Flexnet node — chained via N0CALL-14"
 
   # --- Open node: no login prompt (login_required: false; `user` omitted) ---

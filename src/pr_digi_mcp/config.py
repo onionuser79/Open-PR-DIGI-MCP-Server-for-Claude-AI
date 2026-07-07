@@ -44,6 +44,9 @@ class NodeConfig:
     type: NodeType
     sys_required: bool
     description: str = ""
+    # Keyword that triggers the positional sysop challenge: "SYS" for (X)Net
+    # (default), "SY" for PC/Flexnet. Ignored by BPQ (which elevates via PASSWORD).
+    sys_command: str = "SYS"
     # Direct-access fields (xnet, bpq, linbpq)
     ssh_host: str = ""
     telnet_host: str = ""
@@ -149,6 +152,7 @@ def load_nodes(path: Path | None = None) -> dict[str, NodeConfig]:
                     type=node_type,
                     sys_required=bool(fields.get("sys_required", False)),
                     description=str(fields.get("description", "")),
+                    sys_command=str(fields.get("sys_command", "SYS")),
                     transit_via=str(fields["transit_via"]),
                     connect_command=str(fields["connect_command"]),
                 )
@@ -172,6 +176,7 @@ def load_nodes(path: Path | None = None) -> dict[str, NodeConfig]:
                     login_required=login_required,
                     sys_required=bool(fields.get("sys_required", False)),
                     description=str(fields.get("description", "")),
+                    sys_command=str(fields.get("sys_command", "SYS")),
                 )
         except KeyError as e:
             raise ValueError(f"{path}: node {callsign!r} missing field {e}") from None

@@ -22,7 +22,8 @@ Ask the operator (one question at a time if unclear):
     telnet) → `transit_via` = the first-hop node, which may be an **(X)Net OR a
     BPQ/LinBPQ** node (any AX.25-capable node the MCP can telnet into; or another
     chained node for multi-hop) + `connect_command` (`C <CALLSIGN>`). No `user`.
-    Note: PC/Flexnet's commands differ from (X)Net — it's driven via `xnet_sys_command`.
+    Note: PC/Flexnet's commands differ from (X)Net — it's driven via `xnet_sys_command`,
+    and its sysop keyword is `SY` — set `sys_command: SY` on the node (default is `SYS`).
 - **Login**: a `user` (login callsign/name) — or `login_required: false` for an
   open node with no login prompt.
 - **`sys_required`**: `true` if the node needs SYS/PASSWORD for write tools.
