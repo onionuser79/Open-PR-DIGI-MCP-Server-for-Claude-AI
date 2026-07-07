@@ -16,6 +16,7 @@ miss and fall through to YAML.
 from __future__ import annotations
 
 import logging
+import os
 import queue
 import threading
 from pathlib import Path
@@ -116,3 +117,28 @@ def get_password(node: str, kind: KIND) -> str:
         f"Set keychain entry (service='{SERVICE}', account='{account}') "
         f"or populate {_yaml_fallback_path()}"
     )
+
+
+def get_http_tokens() -> set[str]:
+    """Valid bearer tokens for the authenticated HTTP transport.
+
+    Merges two sources: the ``PR_DIGI_MCP_HTTP_TOKENS`` env var (comma-separated)
+    and the OS keyring (service ``pr-digi-mcp``, account ``http_tokens``, also
+    comma-separated).
+
+    Raises:
+        LookupError: if no tokens are configured in either source.
+    """
+    tokens: set[str] = set()
+    env = os.environ.get("PR_DIGI_MCP_HTTP_TOKENS", "")
+    tokens |= {t.strip() for t in env.split(",") if t.strip()}
+    kr = _keyring_get_with_timeout(SERVICE, "http_tokens", KEYRING_TIMEOUT_S)
+    if kr:
+        tokens |= {t.strip() for t in kr.split(",") if t.strip()}
+    if not tokens:
+        raise LookupError(
+            "No HTTP tokens configured. Set env PR_DIGI_MCP_HTTP_TOKENS "
+            "(comma-separated), or a keyring entry (service='pr-digi-mcp', "
+            "account='http_tokens')."
+        )
+    return tokens

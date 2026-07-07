@@ -101,8 +101,9 @@ generalized for anyone to run.
 **Docs:** [`docs/tools.md`](docs/tools.md) — supported node types + the full
 81-tool catalog · [`docs/onboarding-nodes.md`](docs/onboarding-nodes.md) —
 access prerequisites, credential storage, and how to onboard/offboard a node ·
-[DESIGN.md](DESIGN.md) — architecture · [CONTRIBUTING.md](CONTRIBUTING.md) ·
-[PLAN.md](PLAN.md) — roadmap.
+[`docs/remote-access.md`](docs/remote-access.md) — optional authenticated (HTTP)
+remote access · [DESIGN.md](DESIGN.md) — architecture ·
+[CONTRIBUTING.md](CONTRIBUTING.md) · [PLAN.md](PLAN.md) — roadmap.
 
 **Onboarding a node?** Ask Claude Code — the repo ships `onboard-pr-digi` and
 `offboard-pr-digi` skills (`.claude/skills/`) that drive it step by step.

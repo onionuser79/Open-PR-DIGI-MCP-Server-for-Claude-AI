@@ -87,13 +87,14 @@ the README.
 - ✅ **Per-node sysop-auth keyword** — `NodeConfig.sys_command` (default `SYS`; set
   `SY` for PC/Flexnet). Used by (X)Net + chained `elevate_sys()`; BPQ unaffected
   (`PASSWORD`). Config + transports + tests.
-- ⬜ **Authenticated remote access.** Today the server is **stdio-only with no
-  client-side authentication** — anyone who can launch the process inherits
-  access to every configured node's credentials. That fits the intended
-  single-operator, local model. For remote or multi-user use it would need an
-  authenticated HTTP/SSE transport in front (e.g. bearer token / OAuth, per-user
-  scoping, and TLS). Until then, do **not** expose the server beyond the local
-  host.
+- ✅ **Authenticated remote access.** `pr-digi-mcp serve-http` serves the MCP over
+  **Streamable HTTP** behind a **bearer-token** ASGI gate (`http_auth.py`), tokens
+  from `PR_DIGI_MCP_HTTP_TOKENS`/keyring. Loopback default; non-loopback without TLS
+  refused unless `--insecure`; optional `--tls-cert/--tls-key`. stdio stays default;
+  the confirm-gate still applies. Middleware tests + a live smoke test. See
+  [`docs/remote-access.md`](docs/remote-access.md).
+  ⬜ Still open: **per-user / per-node token scoping** and full **OAuth 2.0** (all
+  tokens currently grant full access).
 
 ---
 

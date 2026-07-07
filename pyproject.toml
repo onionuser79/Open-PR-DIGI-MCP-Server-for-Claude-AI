@@ -27,6 +27,8 @@ dependencies = [
     "asyncssh>=2.14.0",
     "pyyaml>=6.0",
     "keyring>=24.0",
+    "uvicorn>=0.23",
+    "starlette>=0.37",
 ]
 
 [project.urls]

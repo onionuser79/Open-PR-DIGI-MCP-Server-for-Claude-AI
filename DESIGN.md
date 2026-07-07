@@ -199,11 +199,16 @@ station is baked into the schema.
 
 ## 9. Security considerations
 
-- **Local trust boundary.** The server is stdio-only with **no client-side
+- **Local trust boundary (default).** Over stdio the server has **no client-side
   authentication** — whoever can launch it inherits access to every configured
-  node's credentials. This suits a single-operator, local setup. **Do not expose
-  it beyond localhost.** Authenticated remote/multi-user access (HTTP/SSE +
-  token/OAuth + TLS) is a Tier-3 item in `PLAN.md`.
+  node's credentials. This suits a single-operator, local setup.
+- **Authenticated remote access (opt-in).** `pr-digi-mcp serve-http` serves the MCP
+  over **Streamable HTTP** behind a **bearer-token** ASGI gate (`http_auth.py`),
+  loopback by default, refusing a non-loopback bind without TLS. Tokens come from
+  `PR_DIGI_MCP_HTTP_TOKENS` / keyring. All tokens currently grant full access —
+  **per-user/per-node scoping and OAuth remain future work**. See
+  [`docs/remote-access.md`](docs/remote-access.md). Never expose the stdio port or
+  an untokenised/cleartext HTTP endpoint off-host.
 - **Secrets** live in the OS keyring or a gitignored, 0600 YAML file — never in
   the repo or `nodes.yaml`.
 - **Authorization:** the confirm-gate keeps state-changing commands behind

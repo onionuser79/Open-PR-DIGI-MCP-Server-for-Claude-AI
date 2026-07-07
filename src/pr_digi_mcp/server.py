@@ -1650,6 +1650,42 @@ async def find_callsign(
     return await _search_callsign(callsign.strip().upper())
 
 
+def _serve_http(args: argparse.Namespace) -> None:
+    """Run the MCP over authenticated Streamable HTTP (bearer token + uvicorn).
+
+    Opt-in transport. Auth is a bearer token (see credentials.get_http_tokens);
+    the per-command confirm-gate still applies. Binds 127.0.0.1 by default;
+    refuses a non-loopback bind without TLS unless --insecure is given.
+    """
+    try:
+        import uvicorn
+    except ImportError:  # pragma: no cover - uvicorn ships with mcp[cli]
+        sys.exit("serve-http needs 'uvicorn' (installed with mcp[cli]).")
+    from .credentials import get_http_tokens
+    from .http_auth import BearerAuthMiddleware
+
+    tokens = get_http_tokens()  # raises LookupError if none are configured
+    loopback = args.host in ("127.0.0.1", "::1", "localhost")
+    tls = bool(args.tls_cert and args.tls_key)
+    if not loopback and not tls and not args.insecure:
+        sys.exit(
+            f"Refusing to bind {args.host!r} without TLS — bearer tokens would "
+            "cross the network in cleartext. Provide --tls-cert/--tls-key, or pass "
+            "--insecure to override (NOT recommended)."
+        )
+    app = BearerAuthMiddleware(mcp.streamable_http_app(), tokens)
+    logger.info(
+        "serve-http on %s:%d (tls=%s, %d token(s))", args.host, args.port, tls, len(tokens)
+    )
+    uvicorn.run(
+        app,
+        host=args.host,
+        port=args.port,
+        ssl_certfile=args.tls_cert,
+        ssl_keyfile=args.tls_key,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="pr-digi-mcp",
@@ -1670,6 +1706,19 @@ def main() -> None:
 
     sub.add_parser("serve", help="Run the MCP stdio server (default if no subcommand)")
 
+    p_http = sub.add_parser(
+        "serve-http", help="Run the MCP over authenticated Streamable HTTP (bearer token)"
+    )
+    p_http.add_argument("--host", default="127.0.0.1", help="Bind address (default: loopback)")
+    p_http.add_argument("--port", type=int, default=8080, help="Bind port (default: 8080)")
+    p_http.add_argument("--tls-cert", default=None, help="TLS certificate file (enables HTTPS)")
+    p_http.add_argument("--tls-key", default=None, help="TLS private-key file")
+    p_http.add_argument(
+        "--insecure",
+        action="store_true",
+        help="Allow binding a non-loopback host without TLS (NOT recommended)",
+    )
+
     args = parser.parse_args()
     _init_logging(args.verbose)
 
@@ -1681,6 +1730,10 @@ def main() -> None:
             _test_run(args.node, args.command, args.sys, args.idle_ms)
         )
         sys.exit(rc)
+
+    if args.cmd == "serve-http":
+        _serve_http(args)
+        return
 
     # Default: serve over stdio
     mcp.run()
