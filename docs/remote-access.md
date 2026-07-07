@@ -14,12 +14,19 @@ MCP **Streamable HTTP** gated by a **bearer token**.
 
 ```bash
 pr-digi-mcp serve-http [--host 127.0.0.1] [--port 8080] \
-                       [--tls-cert cert.pem --tls-key key.pem] [--insecure]
+                       [--tls-cert cert.pem --tls-key key.pem] [--insecure] \
+                       [--allowed-host NAME[:PORT] ...]
 ```
 
 - **`--host`** defaults to `127.0.0.1` (loopback only). Bind wider only deliberately.
 - **Non-loopback bind without TLS is refused** unless you pass `--insecure` — bearer
   tokens must not cross the network in cleartext.
+- **DNS-rebinding protection:** the transport only accepts requests whose `Host`
+  header matches the bind `host:port`. When you bind a LAN IP (e.g.
+  `--host 192.168.1.202 --port 8765`) that address is allowed automatically; add
+  **`--allowed-host`** (repeatable) for any *additional* name a client may use — a
+  DNS hostname (`--allowed-host iw2ohx-gw:8765`) or a reverse-proxy public name.
+  Without this a mismatched `Host` header is rejected with **HTTP 421**.
 - The per-command **confirm-gate still applies** (auth ≠ authorization for destructive
   commands).
 
@@ -63,6 +70,19 @@ The endpoint is the MCP Streamable-HTTP URL (`/mcp`), with the token in the
   }
 }
 ```
+
+For **Claude Code** specifically:
+
+```bash
+claude mcp add --scope user --transport http pr-digi-remote \
+  https://your-host:8080/mcp --header "Authorization: Bearer <token>"
+```
+
+**Self-signed TLS cert?** Node (which Claude Code runs on) validates HTTPS against
+its own CA store, so a self-signed server cert is rejected until you trust it. Export
+the cert's path via `NODE_EXTRA_CA_CERTS` in the environment that launches the client
+(e.g. add `export NODE_EXTRA_CA_CERTS="$HOME/.config/pr-digi-mcp/server-cert.pem"` to
+your shell profile). Use `--scope user` so the entry is available in every project.
 
 ## Verify
 
