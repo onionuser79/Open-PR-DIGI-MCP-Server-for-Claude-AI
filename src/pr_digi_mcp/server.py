@@ -1650,6 +1650,20 @@ async def find_callsign(
     return await _search_callsign(callsign.strip().upper())
 
 
+def _http_allowed(
+    host: str, port: int, tls: bool, extra: list[str]
+) -> tuple[list[str], list[str]]:
+    """Allowed Host + Origin values for the transport's DNS-rebinding guard.
+
+    Always includes the bind ``host:port``; ``extra`` adds more Host values (a
+    hostname, a reverse-proxy public name). Origins mirror them under the scheme.
+    """
+    hosts = sorted({f"{host}:{port}", *extra})
+    scheme = "https" if tls else "http"
+    origins = sorted({f"{scheme}://{h}" for h in hosts})
+    return hosts, origins
+
+
 def _serve_http(args: argparse.Namespace) -> None:
     """Run the MCP over authenticated Streamable HTTP (bearer token + uvicorn).
 
@@ -1673,9 +1687,22 @@ def _serve_http(args: argparse.Namespace) -> None:
             "cross the network in cleartext. Provide --tls-cert/--tls-key, or pass "
             "--insecure to override (NOT recommended)."
         )
+    # Allow the bind host through the SDK's DNS-rebinding protection — otherwise a
+    # non-localhost Host header is rejected (HTTP 421) even after auth.
+    from mcp.server.transport_security import TransportSecuritySettings
+
+    allowed_hosts, allowed_origins = _http_allowed(
+        args.host, args.port, tls, args.allowed_host or []
+    )
+    mcp.settings.transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=allowed_hosts,
+        allowed_origins=allowed_origins,
+    )
     app = BearerAuthMiddleware(mcp.streamable_http_app(), tokens)
     logger.info(
-        "serve-http on %s:%d (tls=%s, %d token(s))", args.host, args.port, tls, len(tokens)
+        "serve-http on %s:%d (tls=%s, %d token(s), allowed_hosts=%s)",
+        args.host, args.port, tls, len(tokens), allowed_hosts,
     )
     uvicorn.run(
         app,
@@ -1717,6 +1744,13 @@ def main() -> None:
         "--insecure",
         action="store_true",
         help="Allow binding a non-loopback host without TLS (NOT recommended)",
+    )
+    p_http.add_argument(
+        "--allowed-host",
+        action="append",
+        default=None,
+        help="Extra Host header value to allow past DNS-rebinding protection "
+        "(repeatable), e.g. a hostname or reverse-proxy name",
     )
 
     args = parser.parse_args()

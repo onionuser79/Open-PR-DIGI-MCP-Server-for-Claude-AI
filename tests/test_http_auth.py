@@ -8,6 +8,7 @@ import pytest
 
 import pr_digi_mcp.credentials as creds
 from pr_digi_mcp.http_auth import BearerAuthMiddleware
+from pr_digi_mcp.server import _http_allowed
 
 TOKEN = "s3cret-token"
 
@@ -90,3 +91,15 @@ def test_get_http_tokens_none_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(creds, "_keyring_get_with_timeout", lambda *a, **k: None)
     with pytest.raises(LookupError):
         creds.get_http_tokens()
+
+
+def test_http_allowed_bind_host_and_scheme() -> None:
+    hosts, origins = _http_allowed("192.168.1.202", 8765, True, [])
+    assert hosts == ["192.168.1.202:8765"]
+    assert origins == ["https://192.168.1.202:8765"]
+
+
+def test_http_allowed_extra_hosts_and_plain_http() -> None:
+    hosts, origins = _http_allowed("0.0.0.0", 8080, False, ["iw2ohx-gw:8080"])
+    assert set(hosts) == {"0.0.0.0:8080", "iw2ohx-gw:8080"}
+    assert "http://0.0.0.0:8080" in origins and "http://iw2ohx-gw:8080" in origins
