@@ -47,42 +47,57 @@ A chained PC/Flexnet node is managed with **exactly** these — everything else 
 **Not applicable to PC/Flexnet:** the structured `xnet_*` routing / IP / ARP / file /
 parameter / dangerous tools, and all `bpq_*` tools.
 
-#### Driving PC/Flexnet — native command examples
+#### PC/Flexnet commands (and how they differ from (X)Net)
 
-Send **PC/Flexnet's own commands** (not (X)Net commands) — reads via
-`xnet_run_command`, sysop actions via `xnet_sys_command` (SYS-elevated, danger-gated).
+Source: *RMNC/FlexNet & PC/FlexNet Sysop Manual* (Günter Jost, DK7WJ) —
+<https://archive.org/details/eastnet-flex> §5. PC/Flexnet's console is **not**
+(X)Net's. Drive reads with `xnet_run_command` and sysop actions with
+`xnet_sys_command`.
 
-**First, discover your node's actual commands** — FlexNet prints its own list; trust
-it over any table here:
-```
-xnet_run_command(node="N0CALL-12", command="?")     # or "help"
-```
+**User (read) commands** (§5.1): `C <call>` connect · `D [*] [call]` **destination
+table / path** (FlexNet's signature routing view) · `F <call>` find · `H` help ·
+`I` info · `L` interlink (link) info · `MH [...]` heard list · `MY` show mycall/SSID ·
+`P` parameters + statistics · `U [*]` user table · `Q` quit.
 
-Common FlexNet commands (illustrative — availability/spelling depends on the build,
-e.g. PC/FlexNet 3.3g; confirm with `?`):
+**Sysop commands** (§5.2 — enter sysop mode with **`SY`**, which answers the same
+5-number positional challenge as (X)Net's `SYS`):
 
-| Command | Shows / does |
-|---------|--------------|
-| `l` | current links |
-| `d` | **destination list** — FlexNet's routing/RTT table (its signature view) |
-| `d <CALL>` | route + RTT to one destination |
-| `i` | node info / version |
-| `mh` | stations heard |
-| `c <CALL>` | connect out to a station |
-| `?` / `h` | command help |
+| Command | Action |
+|---------|--------|
+| `SY` | Sysop authorization (positional challenge) |
+| `L <ch> <call>` | Route `<call>` to channel `<ch>` |
+| `L <viacall> <call>` | Route `<call>` **via** `<viacall>` |
+| `L - <call>` | Delete link/route `<call>` |
+| `MY <call> [ssid1 ssid2]` | Set mycall + SSID range |
+| `MO <ch> <mode>` | Set port `<ch>` mode / baud |
+| `PS <ssid> <ch>` | Map SSID `<ssid>` → port `<ch>` |
+| `PT <x>` | Node timeout, minutes *(OCR-derived mnemonic)* |
+| `M <call>` | Assign local BBS |
+| `K <QSO_no>` | Kill (disconnect) a QSO by number |
+| `CAL <ch> [min]` | Send a calibration signal (RMNC hardware) |
+| `IO <bit> 0\|1` | Set a hardware output bit (RMNC) |
+| `TR <ch>` | Monitor/trace a port (solomaster only) |
+| `W <A/B/C/H/I/L/S>` | Write text files (news / beacon / CTEXT / help / info / local / setsearch); end with `/ex` |
+| `RESET` / `RESTART` | Cold / warm reboot |
 
-Examples:
-```
-xnet_run_command(node="N0CALL-12", command="d")     # destinations (no elevation)
-xnet_run_command(node="N0CALL-12", command="l")     # links
-xnet_sys_command(node="N0CALL-12", command="<sysop cmd>")   # SYS-mode / admin, verbatim
-```
+**Key differences vs (X)Net V1.39** — this is why the structured `xnet_*` tools do
+**not** apply to PC/Flexnet:
 
-**Contrast with (X)Net V1.39:** PC/Flexnet has **no** `ATTACH`/`DETACH`, `ROUTER …`,
-`IPROUTE`/`ARP …`, or `MY…` commands — those are (X)Net-only (and are why the
-structured `xnet_*` write tools don't apply here). FlexNet manages routing through
-its **destination** list, and its sysop/admin functions use FlexNet's own commands —
-consult the FlexNet documentation for your build.
+| Function | PC/Flexnet | (X)Net V1.39 (structured `xnet_*` tools) |
+|----------|-----------|------------------------------------------|
+| Sysop-auth keyword | **`SY`** | **`SYS`** |
+| Routing | `L <ch> <call>` / `L <viacall> <call>` / `L - <call>` | `ROUTER {bc\|flexnet\|local} add/del` |
+| Disconnect | `K <QSO_no>` | `DISCONNECT` |
+| Port setup | `MO` (mode/baud), `PS` (SSID→port); fixed via MRMNC/EPROM | `ATTACH`/`DETACH` + port params |
+| Node timeout | `PT <x>` | parameter set |
+| TCP/IP admin | **none** — FlexNet here is an AX.25/NetROM-FlexNet router | `IPROUTE`/`ARP`/`MYIP`/`SUBNET`/`IPSTOP`/`NETSTAT`/`PING` + nameserver |
+| Services / procs / logs / files | `W` in-node text editor only | `SERVICE`/`PROCESSES`/`STATISTICS`/`LOG`, filesystem ops |
+| Hardware I/O / calibration | `CAL`, `IO` (RMNC hardware) | — |
+
+> **`SY` vs `SYS`:** the MCP's SYS elevation sends `SYS`; PC/Flexnet's documented
+> keyword is `SY`. FlexNet parsers usually match on the `SY` prefix (so `SYS` works),
+> but a per-node sysop-auth keyword is a candidate robustness enhancement — if your
+> PC/Flexnet build rejects `SYS`, flag it (see PLAN.md Tier-3).
 
 **Gate legend:** 🔒 = refuses to run unless `confirm=true` (human-approved);
 ⚠ = escape hatch, danger-classified per command.

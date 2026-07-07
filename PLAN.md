@@ -84,6 +84,10 @@ the README.
 - ✅ **Multi-hop AX.25 chains** — `transit_via` may point at another chained node;
   `config.resolve_chain()` resolves the base direct node + ordered `C …` path (cycles/
   dead-ends rejected). Transport walks the path hop-by-hop. Config + transport + tests.
+- ⬜ **Per-node sysop-auth keyword.** `elevate_sys()` sends `SYS`; PC/Flexnet's
+  documented keyword is `SY` (per DK7WJ's manual). FlexNet parsers usually accept the
+  `SY` prefix, but a configurable per-node keyword would guarantee strict-parser
+  compatibility. (See `docs/tools.md` → PC/Flexnet commands.)
 - ⬜ **Authenticated remote access.** Today the server is **stdio-only with no
   client-side authentication** — anyone who can launch the process inherits
   access to every configured node's credentials. That fits the intended
