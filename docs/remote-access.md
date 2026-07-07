@@ -5,6 +5,10 @@ For a remote MCP client, an **opt-in** authenticated HTTP transport is available
 MCP **Streamable HTTP** gated by a **bearer token**.
 
 > Nothing changes for stdio users — this is a separate subcommand.
+>
+> **Claude Code can walk you through this** — use the `setup-remote-access` skill
+> (`.claude/skills/`); it drives token generation/storage, host/TLS choice, launch,
+> and verification while keeping the token out of the chat.
 
 ## Enable it
 

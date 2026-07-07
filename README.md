@@ -105,5 +105,6 @@ access prerequisites, credential storage, and how to onboard/offboard a node ·
 remote access · [DESIGN.md](DESIGN.md) — architecture ·
 [CONTRIBUTING.md](CONTRIBUTING.md) · [PLAN.md](PLAN.md) — roadmap.
 
-**Onboarding a node?** Ask Claude Code — the repo ships `onboard-pr-digi` and
-`offboard-pr-digi` skills (`.claude/skills/`) that drive it step by step.
+**Let Claude Code drive it** — the repo ships `.claude/skills/`: `onboard-pr-digi` /
+`offboard-pr-digi` (add/remove nodes) and `setup-remote-access` (enable authenticated
+HTTP + bearer token), each walking you through the steps.
