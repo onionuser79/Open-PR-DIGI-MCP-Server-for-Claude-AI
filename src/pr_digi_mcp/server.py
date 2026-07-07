@@ -1112,8 +1112,9 @@ async def xnet_sys_command(
     DEL/KILL/FLUSH token) refuse to run unless confirm=True. The LLM must only
     set confirm=True after the operator has explicitly approved.
 
-    This is the only tool that also targets the chained PC/Flexnet node
-    a chained PC/Flexnet node, whose command set differs from (X)Net V1.39.
+    This is the primary tool for a chained PC/Flexnet node — its command set
+    differs from (X)Net V1.39, so drive it with PC/Flexnet's own commands here
+    rather than the structured (X)Net tools.
     """
     cfg = _get_node(node, _XNET_COMPATIBLE_TYPES)
     cmd = command.strip()

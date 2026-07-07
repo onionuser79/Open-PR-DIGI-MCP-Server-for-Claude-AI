@@ -2,19 +2,50 @@
 
 ## Supported PR digis (today)
 
-| `type` | Node software | CLI family | Notes |
-|--------|---------------|-----------|-------|
-| `xnet` | **(X)Net** (e.g. V1.39) and **PC/Flexnet**-family telnet nodes | single-letter (`L`/`D`/`MH`/`U`/`INFO`) + `SYS` positional challenge | Target of the structured `xnet_*` **write** tools |
-| `linbpq` | **LinBPQ** (Linux BPQ32) | BPQ console + `PASSWORD` sysop | Adds the FlexNet `FL`/`D` tools (linbpq-flexnet builds) |
-| `bpq` | **BPQ32** (Windows) | BPQ console + `PASSWORD` sysop | Same as LinBPQ minus FlexNet |
-| `xnet_chained` | Any (X)Net/PC-Flexnet node reachable **only over AX.25** | (X)Net/PCF | Reached by `C <call>` from a transit node (single- or multi-hop). Generic read tools + the `xnet_sys_command` escape hatch apply; structured writes do not. |
+| `type` | Node software | Reached by | CLI family | Notes |
+|--------|---------------|-----------|-----------|-------|
+| `xnet` | **(X)Net** (e.g. V1.39) | telnet (direct or SSH-jump) | (X)Net single-letter CLI (`L`/`D`/`MH`/`U`/`INFO`) + `SYS` positional challenge | **The only type that has the full structured `xnet_*` write toolset.** |
+| `linbpq` | **LinBPQ** (Linux BPQ32) | telnet (direct or SSH-jump) | BPQ console + `PASSWORD` sysop | Adds the FlexNet `FL`/`D` tools |
+| `bpq` | **BPQ32** (Windows) | telnet (direct or SSH-jump) | BPQ console + `PASSWORD` sysop | LinBPQ minus FlexNet |
+| `xnet_chained` | any AX.25-only node — **notably PC/Flexnet** | **AX.25 `C <call>` from a transit node** (single/multi-hop) | the *target's* own CLI (e.g. PC/Flexnet) | Driven by generic reads + `xnet_sys_command`; **no** structured writes. First hop may be (X)Net **or** BPQ/LinBPQ. |
+
+### (X)Net ≠ PC/Flexnet — read this
+
+**PC/Flexnet is not a `type: xnet` node.** PC/Flexnet has **no telnet interface**,
+so it can never be reached directly — it is **always** configured as
+`xnet_chained` and reached over **AX.25 (`C <call>`)** through a transit node.
+That first hop can be **any AX.25-capable node** — an (X)Net node *or* a
+BPQ32/LinBPQ node (or a further chained hop for multi-hop).
+
+Its **command set differs** from (X)Net V1.39. So a PC/Flexnet node is driven
+with **its own commands via `xnet_sys_command`** (verbatim), *not* the structured
+`xnet_*` tools (those target (X)Net V1.39 only). The single-letter read wrappers
+(`xnet_links`=`L`, `xnet_destinations`=`D`, …) are *accepted* on a chained node but
+send the **(X)Net** letters — treat their output as best-effort on PC/Flexnet and
+prefer `xnet_sys_command` with PC/Flexnet's native syntax.
 
 **Tool applicability rules**
-- `xnet_*` read tools work on any (X)Net-family node (`xnet`, `xnet_chained`).
-- `xnet_*` **structured write** tools require a **direct** `xnet` node (chained nodes
-  use `xnet_sys_command`).
+- `xnet_*` **read** tools accept any (X)Net-family node incl. `xnet_chained`, but
+  send **(X)Net** commands — reliable on `xnet` ((X)Net V1.39), best-effort on a
+  chained PC/Flexnet target.
+- `xnet_*` **structured write** tools require a **direct `xnet` ((X)Net V1.39)** node
+  — **not** PC/Flexnet. Drive PC/Flexnet with `xnet_sys_command`.
 - `bpq_*` tools require `bpq`/`linbpq`; FlexNet tools (`bpq_flexnet_*`) require `linbpq`.
 - Aggregation tools (`network_topology`, `find_callsign`) sweep **all** configured nodes.
+
+### Tools usable on a PC/Flexnet node (`xnet_chained`)
+A chained PC/Flexnet node is managed with **exactly** these — everything else is
+(X)Net-V1.39-only:
+
+| Tool | Role on PC/Flexnet |
+|------|--------------------|
+| `xnet_sys_command` | **Primary driver** — run PC/Flexnet's *own* commands verbatim (after SYS elevation); dangerous ones gated by `confirm` |
+| `xnet_run_command` | Run a verbatim read command (no elevation) |
+| `xnet_links` / `xnet_l_star` / `xnet_destinations` / `xnet_mh` / `xnet_users` / `xnet_info` | Generic read wrappers — *accepted*, but they send the **(X)Net** letters; output is best-effort on PC/Flexnet |
+| `list_nodes` · `network_topology` · `find_callsign` | Inventory / aggregation (best-effort) |
+
+**Not applicable to PC/Flexnet:** the structured `xnet_*` routing / IP / ARP / file /
+parameter / dangerous tools, and all `bpq_*` tools.
 
 **Gate legend:** 🔒 = refuses to run unless `confirm=true` (human-approved);
 ⚠ = escape hatch, danger-classified per command.
@@ -51,6 +82,10 @@
 | `xnet_ping` | `PING` | ICMP/AX.25 reachability |
 | `xnet_monitor` | `MONITOR` (bounded capture) | Live frame capture for N seconds |
 | `xnet_ipdump` | `IPDUMP` (bounded capture) | IP packet capture for N seconds |
+
+> **The structured (X)Net groups below** (routing, IP/ARP, config, files,
+> dangerous) target a **direct `xnet` ((X)Net V1.39)** node only — they do **not**
+> apply to PC/Flexnet (`xnet_chained`), which is driven via `xnet_sys_command`.
 
 ### (X)Net — routing (4)
 | Tool | Action | Gate |

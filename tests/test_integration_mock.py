@@ -199,3 +199,20 @@ async def test_chained_multi_hop(monkeypatch: pytest.MonkeyPatch) -> None:
         async with Ax25ChainedTransport(target, base, ["C MID", "C FAR"]) as ch:
             out = await ch.run_command("L", idle_ms=200, max_wait_s=5.0)
     assert "Link table" in out
+
+
+async def test_chained_via_bpq_base(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The chained first-hop (base) may be a BPQ/LinBPQ node, not just (X)Net."""
+    _patch_creds(monkeypatch)
+    async with _serve("bpq") as port:
+        base = _direct_cfg("linbpq", port)  # first hop is a LinBPQ node
+        target = NodeConfig(
+            callsign="PCF-1",
+            type="xnet_chained",
+            sys_required=True,
+            transit_via="BP-BASE",
+            connect_command="C PCF-1",
+        )
+        async with Ax25ChainedTransport(target, base, ["C PCF-1"]) as ch:
+            out = await ch.run_command("L", idle_ms=200, max_wait_s=5.0)
+    assert "Link table" in out

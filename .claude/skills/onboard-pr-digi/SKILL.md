@@ -18,8 +18,11 @@ Ask the operator (one question at a time if unclear):
   - **Direct telnet** → `telnet_host`, `telnet_port`.
   - **Via SSH jump** → also `ssh_host` (must be an alias in `~/.ssh/config`);
     `telnet_host` is the address *as seen from the jump host*.
-  - **Chained AX.25** → `transit_via` (an existing node — direct **or** another
+  - **Chained AX.25** (the only way to reach a **PC/Flexnet** node — it has no
+    telnet) → `transit_via` = the first-hop node, which may be an **(X)Net OR a
+    BPQ/LinBPQ** node (any AX.25-capable node the MCP can telnet into; or another
     chained node for multi-hop) + `connect_command` (`C <CALLSIGN>`). No `user`.
+    Note: PC/Flexnet's commands differ from (X)Net — it's driven via `xnet_sys_command`.
 - **Login**: a `user` (login callsign/name) — or `login_required: false` for an
   open node with no login prompt.
 - **`sys_required`**: `true` if the node needs SYS/PASSWORD for write tools.

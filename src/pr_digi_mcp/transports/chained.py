@@ -38,7 +38,16 @@ class Ax25ChainedTransport(XnetTransport):
     is uniform. The base class handles SSH/telnet IO + base login; this subclass
     walks the connect path on connect, retargets SYS auth at the target node's
     credentials, and tears down with a leading BYE.
+
+    The **base/first-hop node** (the one with a telnet console) may be any
+    AX.25-capable direct node — an (X)Net node OR a BPQ32/LinBPQ node — since
+    reaching the next hop is just a normal `C <call>` connect (no elevation).
+    The chained **target** is typically a PC/Flexnet node (no telnet of its own).
     """
+
+    # The base node this transport logs into may be any direct type that can
+    # issue an AX.25 `C` connect (the login flow is shared across families).
+    _ACCEPTED_TYPES = frozenset({"xnet", "bpq", "linbpq"})
 
     def __init__(
         self,

@@ -29,14 +29,19 @@ HAMNET behind a Pi you can SSH into).
 
 ### C. Chained AX.25 — a node with no telnet, reached over packet radio
 The target has **no telnet at all**; it is reachable only by an AX.25 `C <call>`
-connect **from another node that _does_ have telnet** (directly or via an SSH jump).
-- **Single hop:** `transit_via` = a direct/SSH-reachable node; `connect_command` =
-  `C <TARGET>`.
+connect from a transit node. **This is the only way to reach a PC/Flexnet node**
+— PC/Flexnet has no telnet interface, so it is *always* this model.
+- **First hop / transit node:** any **AX.25-capable node that the MCP can telnet
+  into** — an **(X)Net** node *or* a **BPQ32/LinBPQ** node (directly or via SSH
+  jump). It just needs to accept a `C <call>` connect.
+- **Single hop:** `transit_via` = that first-hop node; `connect_command` = `C <TARGET>`.
 - **Multi-hop:** `transit_via` may point at **another chained node**; the connect
-  path is resolved automatically (base direct node → `C hop1` → … → `C target`).
-  Cycles / chains that never reach a direct node are rejected at load time.
+  path is resolved automatically (base node → `C hop1` → … → `C target`). Cycles /
+  chains that never reach a telnet-capable base are rejected at load time.
 - **Login is inherited** from the base node (the AX.25 SABM carries its identity),
   so the target needs **no `user`** — only a `sys_pwd` if you want its write tools.
+- **Commands differ:** PC/Flexnet's command set is *not* (X)Net V1.39's — drive it
+  with the `xnet_sys_command` tool using PC/Flexnet's own syntax (see `docs/tools.md`).
 
 **In all cases**, for the *write / sysop* tools you also need the node's **SYS**
 (or BPQ **PASSWORD**) secret. Read-only tools need only the login (model A/B) or

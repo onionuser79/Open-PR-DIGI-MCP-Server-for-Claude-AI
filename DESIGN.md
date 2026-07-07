@@ -115,7 +115,10 @@ Inherits IO/login. Elevation sends `PASSWORD`, then either:
 - a **5-number positional challenge** answered from the sys password.
 
 ### 5.3 `Ax25ChainedTransport`
-For nodes reachable only over RF/AX.25 via one or more transit hops.
+For nodes reachable only over RF/AX.25 via one or more transit hops — notably
+**PC/Flexnet**, which has no telnet interface and a command set distinct from
+(X)Net V1.39 (drive it via `xnet_sys_command`, not the structured (X)Net tools).
+The base/first-hop node may be any direct node — **(X)Net or BPQ/LinBPQ**.
 `config.resolve_chain()` walks `transit_via` to a **base direct node** and the
 ordered list of `C …` commands (single-hop if `transit_via` is a direct node,
 multi-hop if it points at another chained node — cycles/dead-ends are rejected at
