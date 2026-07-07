@@ -7,7 +7,7 @@ from textwrap import dedent
 
 import pytest
 
-from pr_digi_mcp.config import NodeConfig, load_nodes
+from pr_digi_mcp.config import NodeConfig, load_nodes, resolve_chain
 
 
 def _write(path: Path, content: str) -> None:
@@ -159,7 +159,7 @@ def test_load_nodes_chained_missing_transit_via(tmp_path: Path) -> None:
         load_nodes(path)
 
 
-def test_load_nodes_chained_unknown_outer(tmp_path: Path) -> None:
+def test_load_nodes_chained_unknown_transit(tmp_path: Path) -> None:
     path = tmp_path / "nodes.yaml"
     _write(
         path,
@@ -171,36 +171,19 @@ def test_load_nodes_chained_unknown_outer(tmp_path: Path) -> None:
             connect_command: "C IW2OHX-12"
         """,
     )
-    with pytest.raises(ValueError, match="unknown outer node"):
+    with pytest.raises(ValueError, match="unknown transit node"):
         load_nodes(path)
 
 
-def test_load_nodes_chained_rejects_multi_hop(tmp_path: Path) -> None:
+def test_load_nodes_multi_hop_resolves(tmp_path: Path) -> None:
+    """Multi-hop chains are supported: resolve to base + ordered connect path."""
     path = tmp_path / "nodes.yaml"
     _write(
         path,
         """
         nodes:
-          OUTER:
-            type: xnet_chained
-            transit_via: SOMEWHERE
-            connect_command: "C OUTER"
-          INNER:
-            type: xnet_chained
-            transit_via: OUTER
-            connect_command: "C INNER"
-        """,
-    )
-    # OUTER references unknown SOMEWHERE first, so we'll get that error.
-    # Test multi-hop rejection separately with a valid base direct node:
-    path2 = tmp_path / "nodes2.yaml"
-    _write(
-        path2,
-        """
-        nodes:
           BASE:
             type: xnet
-            ssh_host: gw
             telnet_host: 1.1.1.1
             telnet_port: 23
             user: x
@@ -214,5 +197,69 @@ def test_load_nodes_chained_rejects_multi_hop(tmp_path: Path) -> None:
             connect_command: "C FAR"
         """,
     )
-    with pytest.raises(ValueError, match="multi-hop chains not supported"):
-        load_nodes(path2)
+    nodes = load_nodes(path)  # must not raise
+    base, commands = resolve_chain(nodes["FAR"], nodes)
+    assert base.callsign == "BASE"
+    assert base.type == "xnet"
+    # Ordered from the base outward to the target.
+    assert commands == ["C MID", "C FAR"]
+    # Single-hop still works.
+    base1, cmds1 = resolve_chain(nodes["MID"], nodes)
+    assert base1.callsign == "BASE"
+    assert cmds1 == ["C MID"]
+
+
+def test_load_nodes_chain_cycle_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "nodes.yaml"
+    _write(
+        path,
+        """
+        nodes:
+          A:
+            type: xnet_chained
+            transit_via: B
+            connect_command: "C A"
+          B:
+            type: xnet_chained
+            transit_via: A
+            connect_command: "C B"
+        """,
+    )
+    with pytest.raises(ValueError, match="cycle"):
+        load_nodes(path)
+
+
+def test_load_nodes_open_node_no_login(tmp_path: Path) -> None:
+    """login_required: false lets a node omit `user` (open node, no login)."""
+    path = tmp_path / "nodes.yaml"
+    _write(
+        path,
+        """
+        nodes:
+          OPEN-1:
+            type: xnet
+            telnet_host: 192.0.2.20
+            telnet_port: 23
+            login_required: false
+            description: "open node"
+        """,
+    )
+    node = load_nodes(path)["OPEN-1"]
+    assert node.login_required is False
+    assert node.user == ""
+
+
+def test_load_nodes_login_required_needs_user(tmp_path: Path) -> None:
+    path = tmp_path / "nodes.yaml"
+    _write(
+        path,
+        """
+        nodes:
+          NEEDS-USER:
+            type: xnet
+            telnet_host: 192.0.2.21
+            telnet_port: 23
+        """,
+    )
+    with pytest.raises(ValueError, match="user"):
+        load_nodes(path)

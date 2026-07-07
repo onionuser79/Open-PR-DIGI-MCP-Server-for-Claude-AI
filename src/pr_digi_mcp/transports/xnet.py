@@ -261,6 +261,11 @@ class XnetTransport:
     # ── internals ─────────────────────────────────────────────────────────
 
     async def _login(self) -> None:
+        if not self.config.login_required:
+            # Open node: no login prompt — just drain any banner and proceed.
+            await self._read_until_idle(idle_ms=500, max_wait_s=10.0)
+            logger.info("%s: no login required (open node)", self.config.callsign)
+            return
         try:
             await self._read_until(LOGIN_PROMPTS, timeout=10.0)
         except TimeoutError as e:

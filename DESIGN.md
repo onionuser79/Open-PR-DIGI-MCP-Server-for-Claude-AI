@@ -56,9 +56,10 @@ then `./config/nodes.yaml`, then the packaged example). Each entry is a
 |-------|-----------|-------|
 | `type` | all | `xnet` · `bpq` · `linbpq` · `xnet_chained` |
 | `telnet_host`, `telnet_port` | direct-access | node endpoint |
-| `user` | direct-access | login callsign/name |
+| `user` | direct-access | login callsign/name (required unless `login_required: false`) |
+| `login_required` | direct-access | default **true**; `false` = open node with no login prompt |
 | `ssh_host` | direct-access | **optional** SSH jump-host alias (see §4) |
-| `transit_via`, `connect_command` | `xnet_chained` | the transit node + its `C …` command |
+| `transit_via`, `connect_command` | `xnet_chained` | transit node (a direct node **or** another chained node → multi-hop) + its `C …` command |
 | `sys_required` | all | whether write tools need SYS/PASSWORD elevation |
 | `description` | all | free text |
 
@@ -113,12 +114,16 @@ Inherits IO/login. Elevation sends `PASSWORD`, then either:
 - a **5-number positional challenge** answered from the sys password.
 
 ### 5.3 `Ax25ChainedTransport`
-For nodes reachable only over RF/AX.25 via a transit node. `connect()` logs into
-the **outer** node, then issues `connect_command` (`C <inner>`) and waits for the
-`*** CONNECTED to …` banner (failure markers raise). The inner has **no separate
-login** — the AX.25 SABM carries the outer's user identity through. SYS elevation
-targets the **inner** node's password. Teardown sends `BYE` to the inner first,
-then lets the base class `BYE` the outer, so the AX.25 link drops cleanly.
+For nodes reachable only over RF/AX.25 via one or more transit hops.
+`config.resolve_chain()` walks `transit_via` to a **base direct node** and the
+ordered list of `C …` commands (single-hop if `transit_via` is a direct node,
+multi-hop if it points at another chained node — cycles/dead-ends are rejected at
+load time). `connect()` logs into the base, then issues each `C …` command in
+order, waiting for the `*** CONNECTED to …` banner at each hop (failure markers
+raise). The target has **no separate login** — the AX.25 SABM carries the base's
+user identity through. SYS elevation targets the **target** node's password.
+Teardown sends `BYE` (innermost) then lets the base class `BYE`/close; intermediate
+hops fall back on their inactivity timeout.
 
 ---
 

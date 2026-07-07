@@ -49,3 +49,21 @@ nodes:
     connect_command: "C N0CALL-12"
     sys_required: true           # SYS pwd on the INNER node (see credentials.yaml)
     description: "PC/Flexnet node — chained via N0CALL-14"
+
+  # --- Open node: no login prompt (login_required: false; `user` omitted) ---
+  N0CALL-9:
+    type: xnet
+    telnet_host: 192.0.2.30
+    telnet_port: 23
+    login_required: false
+    sys_required: false
+    description: "(X)Net open node — connects straight to the prompt"
+
+  # --- Multi-hop chain: transit_via points at ANOTHER chained node ---
+  #   Path resolves to: base N0CALL-14  ->  C N0CALL-12  ->  C N0CALL-99
+  N0CALL-99:
+    type: xnet_chained
+    transit_via: N0CALL-12       # itself chained (via N0CALL-14) — multi-hop OK
+    connect_command: "C N0CALL-99"
+    sys_required: true
+    description: "PC/Flexnet node — 2 hops (via N0CALL-14 -> N0CALL-12)"

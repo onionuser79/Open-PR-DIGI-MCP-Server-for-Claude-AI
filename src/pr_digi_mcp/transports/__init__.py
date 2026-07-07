@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..config import NodeConfig
+from ..config import NodeConfig, resolve_chain
 from .bpq import BpqTransport
 from .chained import Ax25ChainedTransport
 from .xnet import XnetError, XnetTransport
@@ -23,23 +23,19 @@ def open_transport(
 
     Returns an `XnetTransport` (or subclass) — callers use it as an async
     context manager and ignore the concrete class. For chained nodes the
-    `all_nodes` mapping is consulted to resolve `transit_via`.
+    `all_nodes` mapping is consulted to resolve the (single- or multi-hop)
+    connect path to a base direct node.
 
     Raises:
-        ValueError: for unsupported node types or missing outer config.
+        ValueError: for unsupported node types or an unresolvable chain.
     """
     if cfg.type == "xnet":
         return XnetTransport(cfg)
     if cfg.type in ("bpq", "linbpq"):
         return BpqTransport(cfg)
     if cfg.type == "xnet_chained":
-        outer = all_nodes.get(cfg.transit_via)
-        if outer is None:
-            raise ValueError(
-                f"chained node {cfg.callsign!r} references unknown outer "
-                f"{cfg.transit_via!r}"
-            )
-        return Ax25ChainedTransport(cfg, outer)
+        base, connect_commands = resolve_chain(cfg, all_nodes)
+        return Ax25ChainedTransport(cfg, base, connect_commands)
     raise ValueError(
         f"node {cfg.callsign!r} has type {cfg.type!r}; supported: "
         f"xnet, xnet_chained, bpq, linbpq"

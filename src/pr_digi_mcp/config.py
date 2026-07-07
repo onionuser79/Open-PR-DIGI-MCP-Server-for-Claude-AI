@@ -20,18 +20,24 @@ class NodeConfig:
     """Static configuration for a single digi node.
 
     For direct-access nodes (`type='xnet'`, `'bpq'`, `'linbpq'`):
-        `telnet_host` + `telnet_port` + `user` are required. `ssh_host` is
-        OPTIONAL: set it to reach the node through an SSH jump host (the
-        telnet TCP channel is tunnelled over SSH); leave it empty/omitted to
-        connect directly to `telnet_host:telnet_port` (same LAN, or a node
-        directly reachable over HAMNET/AMPRNet/Internet).
+        `telnet_host` + `telnet_port` are required. `ssh_host` is OPTIONAL:
+        set it to reach the node through an SSH jump host (the telnet TCP
+        channel is tunnelled over SSH); leave it empty/omitted to connect
+        directly to `telnet_host:telnet_port` (same LAN, or a node reachable
+        over HAMNET/AMPRNet/Internet).
 
-    For chained-access nodes (`type='xnet_chained'`) — e.g. IW2OHX-12
-    reachable only via an AX.25 `C` from IW2OHX-14:
-        `transit_via` + `connect_command` are required.
-        The outer node's `ssh_host`/`telnet_host`/`user` are inherited
-        at connect time, so the chained node's same-named fields are
-        ignored (and may be left empty in the YAML).
+        `login_required` (default true) controls the telnet login step:
+          - true  -> `user` is required; the transport sends it + the user
+                     password at the login/password prompts.
+          - false -> the node exposes its prompt without a login (some open
+                     nodes); `user` may be omitted and no user password is used.
+
+    For chained-access nodes (`type='xnet_chained'`) reachable only via an
+    AX.25 `C` from a transit node:
+        `transit_via` + `connect_command` are required. `transit_via` may point
+        at a direct node (single hop) OR at another chained node (multi-hop):
+        the chain is resolved to a base direct node plus the ordered list of
+        `C …` commands. Direct-connect fields are inherited from the base node.
     """
 
     callsign: str
@@ -43,6 +49,7 @@ class NodeConfig:
     telnet_host: str = ""
     telnet_port: int = 0
     user: str = ""
+    login_required: bool = True
     # Chained-access fields (xnet_chained)
     transit_via: str = ""
     connect_command: str = ""
@@ -55,6 +62,43 @@ def _config_search_paths() -> list[Path]:
         Path.cwd() / "config" / "nodes.yaml",
         Path(__file__).resolve().parent.parent.parent / "config" / "nodes.yaml",
     ]
+
+
+def resolve_chain(
+    cfg: NodeConfig, all_nodes: dict[str, NodeConfig]
+) -> tuple[NodeConfig, list[str]]:
+    """Resolve a (possibly multi-hop) chained node to its base + connect path.
+
+    Walks `transit_via` from the target inward until a direct (non-chained)
+    node is reached. Returns `(base_direct_config, connect_commands)` where
+    `connect_commands` is the ordered list of `C …` commands to issue **from
+    the base node** to reach the target (base → … → target).
+
+    Raises:
+        ValueError: on an unknown `transit_via`, a cycle, or a chain that does
+            not terminate at a direct node.
+    """
+    if cfg.type != "xnet_chained":
+        raise ValueError(f"{cfg.callsign!r} is not a chained node")
+    commands: list[str] = []
+    seen: set[str] = set()
+    cur = cfg
+    while cur.type == "xnet_chained":
+        if cur.callsign in seen:
+            raise ValueError(
+                f"chained node {cfg.callsign!r}: cycle detected at {cur.callsign!r}"
+            )
+        seen.add(cur.callsign)
+        commands.append(cur.connect_command)
+        nxt = all_nodes.get(cur.transit_via)
+        if nxt is None:
+            raise ValueError(
+                f"chained node {cur.callsign!r} references unknown "
+                f"transit node {cur.transit_via!r}"
+            )
+        cur = nxt
+    commands.reverse()  # now ordered base -> ... -> target
+    return cur, commands
 
 
 def load_nodes(path: Path | None = None) -> dict[str, NodeConfig]:
@@ -109,33 +153,33 @@ def load_nodes(path: Path | None = None) -> dict[str, NodeConfig]:
                     connect_command=str(fields["connect_command"]),
                 )
             else:
-                # Direct-access nodes need the SSH+telnet quartet.
+                # Direct-access nodes need telnet_host/port; ssh_host optional;
+                # user required only when login_required (default true).
+                login_required = bool(fields.get("login_required", True))
+                user = str(fields.get("user", ""))
+                if login_required and not user:
+                    raise ValueError(
+                        f"{path}: node {callsign!r} needs 'user' "
+                        f"(or set login_required: false)"
+                    )
                 out[callsign] = NodeConfig(
                     callsign=callsign,
                     type=node_type,
                     ssh_host=str(fields.get("ssh_host", "")),
                     telnet_host=fields["telnet_host"],
                     telnet_port=int(fields["telnet_port"]),
-                    user=fields["user"],
+                    user=user,
+                    login_required=login_required,
                     sys_required=bool(fields.get("sys_required", False)),
                     description=str(fields.get("description", "")),
                 )
         except KeyError as e:
             raise ValueError(f"{path}: node {callsign!r} missing field {e}") from None
 
-    # Validate transit_via references for chained nodes.
+    # Validate every chained node resolves to a direct base (catches unknown
+    # transit_via, cycles, and chains that never reach a direct node).
     for cfg in out.values():
         if cfg.type == "xnet_chained":
-            if cfg.transit_via not in out:
-                raise ValueError(
-                    f"{path}: chained node {cfg.callsign!r} references unknown "
-                    f"outer node {cfg.transit_via!r}"
-                )
-            if out[cfg.transit_via].type == "xnet_chained":
-                raise ValueError(
-                    f"{path}: chained node {cfg.callsign!r}'s transit_via "
-                    f"{cfg.transit_via!r} is itself chained — multi-hop chains "
-                    f"not supported in v0.x"
-                )
+            resolve_chain(cfg, out)
 
     return out

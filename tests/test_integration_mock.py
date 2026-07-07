@@ -19,9 +19,11 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 import pytest
 
 import pr_digi_mcp.transports.bpq as bpq_mod
+import pr_digi_mcp.transports.chained as chained_mod
 import pr_digi_mcp.transports.xnet as xnet_mod
 from pr_digi_mcp.config import NodeConfig
 from pr_digi_mcp.transports.bpq import BpqTransport
+from pr_digi_mcp.transports.chained import Ax25ChainedTransport
 from pr_digi_mcp.transports.xnet import XnetTransport
 
 USER_PWD = "userpass"
@@ -45,17 +47,18 @@ async def _read_cr(reader: asyncio.StreamReader) -> bytes | None:
         buf += ch
 
 
-def _make_handler(mode: str) -> Handler:
+def _make_handler(mode: str, login: bool = True) -> Handler:
     async def handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         async def send(data: bytes) -> None:
             writer.write(data)
             await writer.drain()
 
         try:
-            await send(b"login: ")
-            await _read_cr(reader)  # username (not validated by the mock)
-            await send(b"password: ")
-            await _read_cr(reader)  # password (not validated by the mock)
+            if login:
+                await send(b"login: ")
+                await _read_cr(reader)  # username (not validated by the mock)
+                await send(b"password: ")
+                await _read_cr(reader)  # password (not validated by the mock)
             await send(b"*** Welcome to MOCK node\r\n" + PROMPT)
 
             while True:
@@ -78,6 +81,8 @@ def _make_handler(mode: str) -> Handler:
                     want = "".join(SYS_PWD[i - 1] for i in (5, 10, 3, 7, 4)).encode()
                     ok = resp.strip() == want
                     await send((b"Ok\r\n" if ok else b"Sorry\r\n") + PROMPT)
+                elif cmd.startswith("C "):  # AX.25 chain hop
+                    await send(b"*** CONNECTED to NODE\r\n" + PROMPT)
                 elif cmd == "L":
                     await send(b"Link table\r\nAAA-1  BBB-2\r\n" + PROMPT)
                 else:
@@ -90,8 +95,8 @@ def _make_handler(mode: str) -> Handler:
 
 
 @contextlib.asynccontextmanager
-async def _serve(mode: str) -> AsyncIterator[int]:
-    server = await asyncio.start_server(_make_handler(mode), "127.0.0.1", 0)
+async def _serve(mode: str, login: bool = True) -> AsyncIterator[int]:
+    server = await asyncio.start_server(_make_handler(mode, login), "127.0.0.1", 0)
     port = server.sockets[0].getsockname()[1]
     async with server:
         await server.start_serving()
@@ -117,6 +122,7 @@ def _patch_creds(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(xnet_mod, "get_password", fake_get_password)
     monkeypatch.setattr(bpq_mod, "get_password", fake_get_password)
+    monkeypatch.setattr(chained_mod, "get_password", fake_get_password)
 
 
 async def test_xnet_direct_login_and_command(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -156,4 +162,40 @@ async def test_bpq_direct_password_elevation(monkeypatch: pytest.MonkeyPatch) ->
             await bp.elevate_sys()
             assert bp._sys_active is True
             out = await bp.run_command("L", idle_ms=200, max_wait_s=5.0)
+    assert "Link table" in out
+
+
+async def test_open_node_no_login(monkeypatch: pytest.MonkeyPatch) -> None:
+    """login_required=False: connect + command with no login exchange."""
+    _patch_creds(monkeypatch)
+    async with _serve("xnet", login=False) as port:
+        cfg = NodeConfig(
+            callsign="OPEN-1",
+            type="xnet",
+            sys_required=False,
+            ssh_host="",
+            telnet_host="127.0.0.1",
+            telnet_port=port,
+            user="",
+            login_required=False,
+        )
+        async with XnetTransport(cfg) as xn:
+            out = await xn.run_command("L", idle_ms=200, max_wait_s=5.0)
+    assert "Link table" in out
+
+
+async def test_chained_multi_hop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Multi-hop chain: base → C MID → C FAR → run a command on the target."""
+    _patch_creds(monkeypatch)
+    async with _serve("xnet") as port:
+        base = _direct_cfg("xnet", port)  # base direct node (logs in)
+        target = NodeConfig(
+            callsign="FAR",
+            type="xnet_chained",
+            sys_required=True,
+            transit_via="MID",
+            connect_command="C FAR",
+        )
+        async with Ax25ChainedTransport(target, base, ["C MID", "C FAR"]) as ch:
+            out = await ch.run_command("L", idle_ms=200, max_wait_s=5.0)
     assert "Link table" in out

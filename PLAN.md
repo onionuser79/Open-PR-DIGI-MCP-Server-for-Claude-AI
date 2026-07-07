@@ -72,11 +72,14 @@ the README.
 
 ## Tier 3 — capability breadth (optional, post-release)
 
-- ⬜ Optional-login nodes (no user/password prompt).
+- ✅ **Optional-login nodes** — `login_required: false` skips the login/user/password
+  exchange for open nodes (`user` then optional). Config + `_login()` + tests.
 - ⬜ Structured parsers (typed JSON for `L`/`D`/`NODES`) rather than raw text.
 - ⬜ Aggregation tools across all configured nodes (network-wide topology, route
   search, link-quality history).
-- ⬜ Multi-hop AX.25 chains (currently single-hop `xnet_chained`).
+- ✅ **Multi-hop AX.25 chains** — `transit_via` may point at another chained node;
+  `config.resolve_chain()` resolves the base direct node + ordered `C …` path (cycles/
+  dead-ends rejected). Transport walks the path hop-by-hop. Config + transport + tests.
 - ⬜ **Authenticated remote access.** Today the server is **stdio-only with no
   client-side authentication** — anyone who can launch the process inherits
   access to every configured node's credentials. That fits the intended
