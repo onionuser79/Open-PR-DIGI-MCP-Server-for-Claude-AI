@@ -22,9 +22,17 @@ whole network from a single conversation.
   command **refuses to run** unless called with an explicit confirmation flag that
   the LLM may set **only after the human operator approves** (see *Safety*).
 - **Node types & transports:**
-  - `xnet` — (X)Net / PC-Flexnet-family telnet nodes
+  - `xnet` — **(X)Net** telnet nodes ((X)Net V1.39 command set; the only type with
+    the structured `xnet_*` write tools)
   - `bpq` / `linbpq` — BPQ32 (Windows) / LinBPQ (Linux), incl. `PASSWORD` sysop elevation
-  - `xnet_chained` — nodes reachable only via `C <call>` from a transit node (AX.25 chain)
+  - `xnet_chained` — AX.25-only nodes reached via `C <call>` from a transit node
+    (single- or multi-hop; first hop may be (X)Net **or** BPQ/LinBPQ). **PC/Flexnet
+    lives here** — it has *no telnet* and a *different command set* from (X)Net, so
+    it's driven via `xnet_sys_command` (see [`docs/tools.md`](docs/tools.md)), not
+    the structured (X)Net tools.
+
+> **(X)Net ≠ PC/Flexnet.** They are distinct node families with different command
+> sets. (X)Net is telnet-reachable; PC/Flexnet is packet-radio-only (chained).
 
 ## How it connects
 

@@ -47,6 +47,43 @@ A chained PC/Flexnet node is managed with **exactly** these — everything else 
 **Not applicable to PC/Flexnet:** the structured `xnet_*` routing / IP / ARP / file /
 parameter / dangerous tools, and all `bpq_*` tools.
 
+#### Driving PC/Flexnet — native command examples
+
+Send **PC/Flexnet's own commands** (not (X)Net commands) — reads via
+`xnet_run_command`, sysop actions via `xnet_sys_command` (SYS-elevated, danger-gated).
+
+**First, discover your node's actual commands** — FlexNet prints its own list; trust
+it over any table here:
+```
+xnet_run_command(node="N0CALL-12", command="?")     # or "help"
+```
+
+Common FlexNet commands (illustrative — availability/spelling depends on the build,
+e.g. PC/FlexNet 3.3g; confirm with `?`):
+
+| Command | Shows / does |
+|---------|--------------|
+| `l` | current links |
+| `d` | **destination list** — FlexNet's routing/RTT table (its signature view) |
+| `d <CALL>` | route + RTT to one destination |
+| `i` | node info / version |
+| `mh` | stations heard |
+| `c <CALL>` | connect out to a station |
+| `?` / `h` | command help |
+
+Examples:
+```
+xnet_run_command(node="N0CALL-12", command="d")     # destinations (no elevation)
+xnet_run_command(node="N0CALL-12", command="l")     # links
+xnet_sys_command(node="N0CALL-12", command="<sysop cmd>")   # SYS-mode / admin, verbatim
+```
+
+**Contrast with (X)Net V1.39:** PC/Flexnet has **no** `ATTACH`/`DETACH`, `ROUTER …`,
+`IPROUTE`/`ARP …`, or `MY…` commands — those are (X)Net-only (and are why the
+structured `xnet_*` write tools don't apply here). FlexNet manages routing through
+its **destination** list, and its sysop/admin functions use FlexNet's own commands —
+consult the FlexNet documentation for your build.
+
 **Gate legend:** 🔒 = refuses to run unless `confirm=true` (human-approved);
 ⚠ = escape hatch, danger-classified per command.
 
