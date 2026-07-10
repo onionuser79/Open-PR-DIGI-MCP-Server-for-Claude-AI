@@ -22,7 +22,10 @@ import re
 _SIGNATURES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("xnet", re.compile(r"\(X\)NET|\bXNET\b", re.IGNORECASE)),
     ("pcf", re.compile(r"PC[\s/=-]?FLEX(NET)?|\bPCFLEX", re.IGNORECASE)),
-    ("bpq", re.compile(r"\bLIN?BPQ\b|\bBPQ32?\b|\bG8BPQ\b", re.IGNORECASE)),
+    # Match "BPQ" anywhere — covers "BPQ Packet Switch", "BPQ32", "LinBPQ",
+    # "G8BPQ". (X)Net / PC-Flexnet are matched first, so a stray "BPQ" in an
+    # xnet banner can't win.
+    ("bpq", re.compile(r"BPQ", re.IGNORECASE)),
 )
 
 Family = str  # "xnet" | "bpq" | "pcf"

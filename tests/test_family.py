@@ -26,6 +26,8 @@ PCF_BANNER = "*** connected to IW2OHX-12\r\nPC/Flexnet 3.3g\r\n"
         ("*** CONNECTED to IW2OHX-4\r\n(X)Net node\r\n", "xnet"),
         (BPQ_BANNER, "bpq"),
         ("BPQ32 Version 6.0.24\r\n", "bpq"),
+        # Real W9GM banner — plain "BPQ", no "32"/"Lin" (regression: was unknown).
+        ("Welcome to the W9GM BPQ Packet Switch - Ken in La Crosse, WI\r\n", "bpq"),
         (PCF_BANNER, "pcf"),
         ("PCFLEX 3.3g\r\n", "pcf"),
         ("", None),
