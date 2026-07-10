@@ -111,7 +111,7 @@ table / path** (FlexNet's signature routing view) · `F <call>` find · `H` help
 | `list_nodes` | Enumerate configured nodes (callsign, type, access path, sys flag) |
 | `network_topology` | Merge every node's neighbour/link table into one structured map |
 | `find_callsign` | Search all nodes' nodes/routes/links for a callsign; report where it's reachable |
-| `remote_run` | Discover a route to **any** callsign on demand (reads `D` + `N` tables of all nodes, ranks by cost/hops), connect over AX.25 `C`, detect the family (MOTD/`V`), and run a user command there (🔒 on dangerous commands) |
+| `remote_run` | Discover a route to **any** callsign on demand (reads `D` + `N` tables of all nodes; ranks FlexNet routes first by cost, then NetROM by hops/quality), connect over AX.25 `C` (fall back on failure), detect the family (MOTD/`V`), and run a user command there (🔒 on dangerous commands) |
 
 ### Generic (1)
 | Tool | Action |

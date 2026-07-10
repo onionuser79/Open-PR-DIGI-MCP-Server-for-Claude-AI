@@ -46,8 +46,10 @@ async def test_discover_prefers_lowest_cost_flexnet() -> None:
     routes = await discover_routes("IR1UAW-10", nodes, run_user)
     assert routes, "expected at least one candidate"
     best = routes[0]
-    # FlexNet cost 3 on XN-14 beats NetROM (inverted quality 256-254=2 -> hmm)
+    # FlexNet routes rank ahead of NetROM ones: XN-14's FlexNet cost-3 route wins
+    # even though its NetROM quality (254) would invert to a lower bare metric.
     assert best.via_node == "XN-14"
+    assert best.source == "flexnet" and best.flexnet_cost == 3
     assert best.connect_chain == ["C IR1UAW-10"]
     # every candidate targets the same callsign
     assert all(r.target == "IR1UAW-10" for r in routes)

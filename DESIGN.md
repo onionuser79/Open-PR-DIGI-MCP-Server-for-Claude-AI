@@ -142,11 +142,11 @@ route at call time (nothing pre-scanned, nothing persisted).
    reading only two tables — FlexNet destinations `D <call>` (cost) and NetROM
    route detail `N <call>` (quality + hops). Link tables (`L`) are deliberately
    **not** used. A bare-token target is first resolved from the NODES alias map.
-2. **Rank** all matches into ONE list by `_rank_key = (metric, hops)` ascending —
-   lower cost/metric then fewer hops wins. FlexNet cost is used directly; NetROM
-   quality is inverted onto the same lower-is-better axis. `_rank_key` /
-   `RouteCandidate.sort_metric()` is the single, documented, tunable place for the
-   ranking scale (flip there if a live capture shows a different preference).
+2. **Rank** all matches into ONE list via `_rank_key`: **FlexNet routes first,
+   ordered by cost**; then **NetROM routes, ordered by fewest hops then best
+   quality**. FlexNet cost is the network's authoritative routing metric, so a
+   FlexNet destination always outranks a NetROM one (NetROM is the fallback).
+   `_rank_key` is the single, documented, tunable place for the ranking policy.
 
 `remote_run` then connects best-first via `open_dynamic_chain()` (which synthesises
 an ephemeral `xnet_chained` config and reuses `Ax25ChainedTransport`), **falling

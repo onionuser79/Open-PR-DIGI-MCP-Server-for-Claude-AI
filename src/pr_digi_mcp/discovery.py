@@ -59,11 +59,11 @@ class RouteCandidate:
     detail: dict[str, str] = field(default_factory=dict)
 
     def sort_metric(self) -> int:
-        """Lower-is-better metric shared across both table families.
+        """Within-source, lower-is-better metric (for display / tie context).
 
-        FlexNet cost is used directly; NetROM quality is inverted onto the same
-        axis. This is the ONE place the ranking scale lives — flip or rescale
-        here if a live capture shows a different preference is wanted.
+        FlexNet cost is used directly; NetROM quality is inverted onto a
+        lower-is-better axis. Cross-family ordering is decided by ``_rank_key``,
+        not by this value (FlexNet routes always rank ahead of NetROM ones).
         """
         if self.source == "flexnet":
             return self.flexnet_cost if self.flexnet_cost is not None else 60000
@@ -83,14 +83,19 @@ class RouteCandidate:
         }
 
 
-def _rank_key(c: RouteCandidate) -> tuple[int, int]:
-    """Ranking rule: lower metric first, then fewer hops (Marco's directive).
+def _rank_key(c: RouteCandidate) -> tuple[int, int, int]:
+    """Ranking rule: FlexNet routes first (by cost), then NetROM (by hops, quality).
 
-    Metric: FlexNet cost, or NetROM quality inverted (see ``sort_metric``). Hops:
-    the network path length (from ``N`` detail; FlexNet ``D`` reports none, so a
-    FlexNet destination counts as a single hop). Ascending on both.
+    FlexNet cost is the network's authoritative routing metric, so a FlexNet
+    destination always outranks a NetROM one; NetROM is the fallback, ordered by
+    fewest hops then best quality (higher = better). This is the single place the
+    ranking policy lives — change here to reweight.
     """
-    return (c.sort_metric(), c.hops)
+    if c.source == "flexnet":
+        cost = c.flexnet_cost if c.flexnet_cost is not None else 60000
+        return (0, cost, c.hops)
+    quality = c.netrom_quality if c.netrom_quality is not None else 0
+    return (1, c.hops, _MAX_NETROM_QUALITY - quality)
 
 
 # Signature: run one user-level command on a node and return the raw text.
