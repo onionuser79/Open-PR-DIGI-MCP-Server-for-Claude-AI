@@ -84,6 +84,12 @@ the README.
 - ✅ **Multi-hop AX.25 chains** — `transit_via` may point at another chained node;
   `config.resolve_chain()` resolves the base direct node + ordered `C …` path (cycles/
   dead-ends rejected). Transport walks the path hop-by-hop. Config + transport + tests.
+- ✅ **On-demand route discovery** (`remote_run` + `discovery.py`) — reach any
+  callsign not in `nodes.yaml`: read every node's `D` (FlexNet cost) + `N` (NetROM
+  quality/hops) tables, rank candidates by cost then hops, connect via `C`
+  best-first with fallback, recognise the far family (MOTD/`V`, `transports/family.py`),
+  and run a user command in its command set. Ephemeral (`open_dynamic_chain`), nothing
+  persisted. Parsers + discovery + family + integration tests.
 - ✅ **Per-node sysop-auth keyword** — `NodeConfig.sys_command` (default `SYS`; set
   `SY` for PC/Flexnet). Used by (X)Net + chained `elevate_sys()`; BPQ unaffected
   (`PASSWORD`). Config + transports + tests.

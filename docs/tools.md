@@ -103,14 +103,15 @@ table / path** (FlexNet's signature routing view) · `F <call>` find · `H` help
 
 ---
 
-## The 81 tools
+## The 82 tools
 
-### Discovery / aggregation (3)
+### Discovery / aggregation (4)
 | Tool | Action |
 |------|--------|
 | `list_nodes` | Enumerate configured nodes (callsign, type, access path, sys flag) |
 | `network_topology` | Merge every node's neighbour/link table into one structured map |
 | `find_callsign` | Search all nodes' nodes/routes/links for a callsign; report where it's reachable |
+| `remote_run` | Discover a route to **any** callsign on demand (reads `D` + `N` tables of all nodes, ranks by cost/hops), connect over AX.25 `C`, detect the family (MOTD/`V`), and run a user command there (🔒 on dangerous commands) |
 
 ### Generic (1)
 | Tool | Action |
@@ -248,5 +249,5 @@ table / path** (FlexNet's signature routing view) · `F <call>` find · `H` help
 
 ---
 
-*Count: 3 + 1 + 13 + 4 + 10 + 4 + 9 + 1 (X)Net-side + 14 + 2 + 3 + 6 + 4 + 2 + 4 + 1 BPQ-side = **81**.
-Was 79 before the two aggregation tools were added.*
+*Count: 4 + 1 + 13 + 4 + 10 + 4 + 9 + 1 (X)Net-side + 14 + 2 + 3 + 6 + 4 + 2 + 4 + 1 BPQ-side = **82**.
+Was 81 before the `remote_run` on-demand route-discovery tool was added.*

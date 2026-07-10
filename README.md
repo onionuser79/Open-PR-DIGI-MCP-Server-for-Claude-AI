@@ -17,6 +17,12 @@ whole network from a single conversation.
 
 - **Diagnostics (read-only):** `L` / `D` / `FL` / `MH` / `NODES` / `ROUTES` /
   `PORTS` / links / stats / heard-lists / IP & ARP tables — returned as text/JSON.
+- **On-demand route discovery (`remote_run`):** reach **any** callsign — even one
+  not in `nodes.yaml`. It reads every configured node's FlexNet-destination (`D`)
+  and NetROM-destination (`N`) tables, ranks the candidate routes by cost then
+  hops, connects over AX.25 (`C`) to the best (falling back to the next on
+  failure), recognises the far node's family (from its MOTD, else `V`), and runs
+  your command in that family's own command set.
 - **Management (guarded):** parameter set, route/node add-del, link reset, port
   and CMS control, etc. Every state-changing / identity-changing / offline-taking
   command **refuses to run** unless called with an explicit confirmation flag that

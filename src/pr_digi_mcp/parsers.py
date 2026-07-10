@@ -8,7 +8,8 @@ bytes still have the raw text.
 
 Covered (stable, widely-used formats):
   - BPQ32/LinBPQ: `ROUTES`, `NODES`, `LINKS`, FlexNet `FL` links, FlexNet `D`
-  - (X)Net: `L` / `L *` link rows (best-effort: port, callsign, dest-type flag)
+  - (X)Net: `L` / `L *` link rows (best-effort: port, callsign, dest-type flag),
+    `N <call>` NetROM route detail (quality/obs/hops), `MH` heard list
 """
 
 from __future__ import annotations
@@ -213,6 +214,109 @@ def parse_xnet_links(text: str) -> list[XnetLink]:
                 callsign=m["call"],
                 dest_type=_XNET_FLAG_NAMES[m["flag"]],
                 flag=m["flag"],
+            )
+        )
+    return out
+
+
+# ── (X)Net NetROM route detail (`N <call>`) ──────────────────────────────────
+# Header:  "routing UAWNET:IR1UAW-10 v IR3UHU-2"
+# Rows:    "  IR1UAW-10 IR1UAW-10 254/6   0.51s  2 hops"
+#          "> IR1UAW-10 IR3UHU-2  254/6   0.50s  3 hops"   (> marks the picked route)
+# Fields per row: [selected] dest via quality/obscount rtt-seconds hop-count.
+_NETROM_ROUTE = re.compile(
+    r"^\s*(?P<sel>>)?\s*(?P<dest>[A-Z0-9]+(?:-\d+)?)\s+(?P<via>[A-Z0-9]+(?:-\d+)?)\s+"
+    r"(?P<qual>\d+)/(?P<obs>\d+)\s+(?P<rtt>[\d.]+)s\s+(?P<hops>\d+)\s+hops?\b"
+)
+_NETROM_HEADER = re.compile(
+    r"^\s*routing\s+(?P<alias>[A-Za-z0-9#]+):(?P<call>[A-Z0-9]+(?:-\d+)?)\b"
+)
+
+
+@dataclass(frozen=True)
+class NetromRoute:
+    dest: str
+    via: str
+    quality: int
+    obs: int
+    rtt_s: float
+    hops: int
+    selected: bool
+
+
+def parse_netrom_route_detail(text: str) -> list[NetromRoute]:
+    """Parse `N <call>` route detail into per-neighbour routes (NetROM quality/hops).
+
+    NetROM quality is higher-is-better; `hops` is the path length reported by the
+    node. The `selected` flag marks the route the node itself prefers (leading `>`).
+    """
+    out: list[NetromRoute] = []
+    for line in text.splitlines():
+        m = _NETROM_ROUTE.match(line)
+        if not m:
+            continue
+        out.append(
+            NetromRoute(
+                dest=m["dest"],
+                via=m["via"],
+                quality=int(m["qual"]),
+                obs=int(m["obs"]),
+                rtt_s=float(m["rtt"]),
+                hops=int(m["hops"]),
+                selected=m["sel"] is not None,
+            )
+        )
+    return out
+
+
+def netrom_best_route(text: str) -> NetromRoute | None:
+    """Return the node's preferred NetROM route (the `>` row, else fewest hops)."""
+    routes = parse_netrom_route_detail(text)
+    if not routes:
+        return None
+    selected = [r for r in routes if r.selected]
+    if selected:
+        return selected[0]
+    return min(routes, key=lambda r: (r.hops, -r.quality))
+
+
+# ── (X)Net heard list (`MH`) ─────────────────────────────────────────────────
+# Header:  " p:call      - date     time         rxbytes"
+# Rows:    " 9:DK0WUE      10.07.26 13:00:49    14358654"
+_XNET_HEARD = re.compile(
+    r"^\s*(?P<port>\d+):(?P<call>[A-Z0-9]+(?:-\d+)?)\s+"
+    r"(?P<date>\d{2}\.\d{2}\.\d{2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+(?P<rxbytes>\d+)"
+)
+
+
+@dataclass(frozen=True)
+class HeardStation:
+    port: int
+    callsign: str
+    date: str
+    time: str
+    rxbytes: int
+
+
+def parse_heard(text: str) -> list[HeardStation]:
+    """Parse an (X)Net `MH` heard list into structured records (tolerant).
+
+    Rows that don't match the (X)Net `port:call date time rxbytes` shape are
+    skipped, so other families' heard output degrades to an empty list rather
+    than a crash; callers keep the raw text either way.
+    """
+    out: list[HeardStation] = []
+    for line in text.splitlines():
+        m = _XNET_HEARD.match(line)
+        if not m:
+            continue
+        out.append(
+            HeardStation(
+                port=int(m["port"]),
+                callsign=m["call"],
+                date=m["date"],
+                time=m["time"],
+                rxbytes=int(m["rxbytes"]),
             )
         )
     return out

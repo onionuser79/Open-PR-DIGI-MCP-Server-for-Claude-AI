@@ -85,6 +85,22 @@ def _make_handler(mode: str, login: bool = True) -> Handler:
                     await send(b"*** CONNECTED to NODE\r\n" + PROMPT)
                 elif cmd == "L":
                     await send(b"Link table\r\nAAA-1  BBB-2\r\n" + PROMPT)
+                elif cmd == "V":  # version — family signature for probe_family
+                    await send(b"\r\n(X)NET 1.39 for DLC7\r\n" + PROMPT)
+                elif cmd == "D" or cmd.startswith("D "):  # FlexNet destinations
+                    await send(b"\r\nFAR    0-15     5  BBB   0-9    99\r\n" + PROMPT)
+                elif cmd.startswith("N "):  # NetROM route detail
+                    await send(
+                        b"\r\nrouting FARNOD:FAR-1 v MID\r\n\r\n"
+                        b"> FAR-1 MID 200/5 0.30s 2 hops\r\n\r\n" + PROMPT
+                    )
+                elif cmd == "N":  # bare NetROM nodes (alias map)
+                    await send(b"\r\nFARNOD:FAR-1   BASE:BASE-1\r\n" + PROMPT)
+                elif cmd == "MH":  # heard list
+                    await send(
+                        b"\r\n p:call      - date     time         rxbytes\r\n"
+                        b"13:AAA-1       10.07.26 13:00:00        12345\r\n" + PROMPT
+                    )
                 else:
                     await send(b"?\r\n" + PROMPT)
         finally:
@@ -113,6 +129,14 @@ def _direct_cfg(node_type: str, port: int) -> NodeConfig:
         telnet_host="127.0.0.1",
         telnet_port=port,
         user="tester",
+    )
+
+
+def _named_cfg(call: str, node_type: str, port: int) -> NodeConfig:
+    """A direct-access node config with a specific callsign (for _NODES maps)."""
+    return NodeConfig(
+        callsign=call, type=node_type, sys_required=True, ssh_host="",
+        telnet_host="127.0.0.1", telnet_port=port, user="tester",
     )
 
 
@@ -229,3 +253,84 @@ async def test_chained_via_bpq_base(monkeypatch: pytest.MonkeyPatch) -> None:
         async with Ax25ChainedTransport(target, base, ["C PCF-1"]) as ch:
             out = await ch.run_command("L", idle_ms=200, max_wait_s=5.0)
     assert "Link table" in out
+
+
+async def test_remote_run_discovers_connects_and_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """End-to-end: discover FAR-1 via BASE-1's D/N tables, connect, probe, run MH."""
+    import pr_digi_mcp.server as server
+
+    _patch_creds(monkeypatch)
+    async with _serve("xnet") as port:
+        monkeypatch.setattr(
+            server, "_NODES", {"BASE-1": _named_cfg("BASE-1", "xnet", port)}
+        )
+        result = await server.remote_run(target="FAR-1", command="MH")
+
+    assert result["found"] is True
+    assert result["connected_via"] == "BASE-1"
+    assert result["family"] == "xnet"          # via the V fallback
+    assert result["source"] == "flexnet"        # cost 5 beats NetROM
+    assert "AAA-1" in result["output"]
+    # MH output is parsed into structured heard records.
+    assert any(h["callsign"] == "AAA-1" and h["port"] == 13
+               for h in result["structured"])
+
+
+async def test_remote_run_falls_back_to_next_candidate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """First (lowest-cost) route's base is down → fall back to the next route."""
+    import socket
+
+    import pr_digi_mcp.server as server
+    from pr_digi_mcp import discovery
+
+    # A port nothing listens on → TCP connect fails fast (ConnectionRefused).
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    dead_port = s.getsockname()[1]
+    s.close()
+
+    _patch_creds(monkeypatch)
+    async with _serve("xnet") as port:
+        monkeypatch.setattr(server, "_NODES", {
+            "DEAD-1": _named_cfg("DEAD-1", "xnet", dead_port),
+            "BASE-1": _named_cfg("BASE-1", "xnet", port),
+        })
+
+        async def fake_discover(target: str, nodes: object, run_user: object) -> list:
+            return [
+                discovery.RouteCandidate(
+                    target="FAR-1", via_node="DEAD-1", source="flexnet", hops=1,
+                    connect_chain=["C FAR-1"], flexnet_cost=1,
+                ),
+                discovery.RouteCandidate(
+                    target="FAR-1", via_node="BASE-1", source="flexnet", hops=1,
+                    connect_chain=["C FAR-1"], flexnet_cost=5,
+                ),
+            ]
+
+        monkeypatch.setattr(server.discovery, "discover_routes", fake_discover)
+        result = await server.remote_run(target="FAR-1", command="MH")
+
+    assert result["found"] is True
+    assert result["connected_via"] == "BASE-1"
+    assert result["attempts"][0]["via"] == "DEAD-1"
+    assert result["attempts"][0]["ok"] is False
+    assert "error" in result["attempts"][0]
+    assert result["attempts"][-1] == {"via": "BASE-1", "ok": True}
+
+
+async def test_remote_run_gates_dangerous_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A dangerous command is refused (approval block) without confirm=True."""
+    import pr_digi_mcp.server as server
+
+    _patch_creds(monkeypatch)
+    monkeypatch.setattr(server, "_NODES", {})
+    result = await server.remote_run(target="FAR-1", command="RESET")
+    assert result["found"] is None
+    assert "APPROVAL REQUIRED" in result["approval"]

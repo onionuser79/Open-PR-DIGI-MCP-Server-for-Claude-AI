@@ -2,6 +2,10 @@
 
 Tools surfaced in v0.2:
     list_nodes()                              — enumerate configured nodes
+    remote_run(target, command, ...)          — discover a route to ANY callsign
+                                                (reads D + N tables of all nodes,
+                                                ranks by cost/hops), connect over
+                                                AX.25, detect family, run a command
     xnet_run_command(node, command, ...)      — generic command runner (Tier 1: read)
     xnet_links(node)                          — L command (current AX.25 links)
     xnet_destinations(node, filter=None)      — D command (destination/route table)
@@ -66,9 +70,9 @@ from typing import Annotated, Any
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
-from . import commands, parsers, safety
+from . import commands, discovery, parsers, safety
 from .config import NodeConfig, load_nodes
-from .transports import open_transport
+from .transports import XnetError, open_dynamic_chain, open_transport
 
 logger = logging.getLogger(__name__)
 mcp = FastMCP("pr-digi-mcp")
@@ -1648,6 +1652,151 @@ async def find_callsign(
     session to every node; BPQ queries elevate to SYS.
     """
     return await _search_callsign(callsign.strip().upper())
+
+
+def _structured_for(command: str, output: str) -> list[dict[str, Any]] | None:
+    """Attach a structured parse when a parser exists for the command's verb.
+
+    Verb-based (tolerant): unknown verbs, or output a parser can't read, return
+    None and the caller keeps the raw text. Not family-specific — the parsers
+    themselves skip rows they don't recognise.
+    """
+    verb, _, rest = command.strip().upper().partition(" ")
+    recs: list[Any]
+    if verb in ("MH", "MHEARD", "AXMHEARD"):
+        recs = parsers.parse_heard(output)
+    elif verb == "D":
+        recs = parsers.parse_bpq_flexnet_destinations(output)
+    elif verb == "N" and rest:
+        recs = parsers.parse_netrom_route_detail(output)
+    elif verb in ("N", "NODES"):
+        recs = parsers.parse_bpq_nodes(output)
+    elif verb in ("L", "LINKS"):
+        recs = parsers.parse_xnet_links(output)
+    elif verb in ("R", "ROUTES"):
+        recs = parsers.parse_bpq_routes(output)
+    else:
+        return None
+    return parsers.to_dicts(recs) if recs else None
+
+
+@mcp.tool()
+async def remote_run(
+    target: Annotated[
+        str,
+        Field(
+            description="Callsign or NODES alias to reach — need NOT be in "
+            "nodes.yaml (e.g. 'IR1UAW-10' or 'UAWNET')"
+        ),
+    ],
+    command: Annotated[
+        str,
+        Field(
+            description="User-level command to run on the remote node, in that "
+            "node's own family command set (e.g. 'MH', 'MHEARD 13', 'D', 'I')"
+        ),
+    ],
+    confirm: Annotated[
+        bool, Field(description="Required when the command is classified DANGEROUS")
+    ] = False,
+    max_attempts: Annotated[
+        int, Field(description="How many ranked routes to try before giving up", ge=1, le=8)
+    ] = 3,
+    idle_ms: Annotated[
+        int, Field(description="Idle-ms before the command response is complete",
+                   ge=100, le=5000)
+    ] = 600,
+) -> dict[str, Any]:
+    """Discover a route to any node on demand, connect over AX.25, and run a command.
+
+    Reaches a target that is NOT configured in nodes.yaml. Discovery reads the
+    FlexNet-destination (``D``) and NetROM-destination (``N``) tables of every
+    configured console node — never link tables — ranks candidates by cost then
+    hops (lowest first), connects to the best via ``C``, and falls back to the
+    next candidate if a connect fails. The far node's family (xnet / bpq / pcf)
+    is recognised from its MOTD, else the ``V`` command. The command is sent
+    verbatim in that family's command set (user-mode; no SYS) and returned raw,
+    with a structured parse attached when one exists for the command's verb.
+
+    DANGEROUS commands refuse to run unless confirm=True (set only after the
+    operator has approved). Returns: {target, found, connected_via, family,
+    source, hops, flexnet_cost/netrom_quality, attempts, command, output,
+    structured?}.
+    """
+    target_norm = target.strip().upper()
+    cmd = command.strip()
+
+    if safety.is_dangerous_command(cmd) and not confirm:
+        return {
+            "target": target_norm,
+            "found": None,
+            "approval": safety.approval_required(
+                node=target_norm,
+                action="Connect to a discovered remote node and run a command",
+                command=cmd,
+                risk="Verbatim command flagged as state-changing/destructive "
+                "on a remote node.",
+            ),
+        }
+
+    async def run_user(cfg: NodeConfig, discovery_cmd: str) -> str:
+        return await _run_user(cfg, discovery_cmd)
+
+    candidates = await discovery.discover_routes(target_norm, _NODES, run_user)
+    if not candidates:
+        consulted = sorted(
+            c.callsign for c in _NODES.values() if c.type in discovery._SOURCE_TYPES
+        )
+        return {
+            "target": target_norm,
+            "found": False,
+            "consulted": consulted,
+            "note": f"No configured node has a FlexNet (D) or NetROM (N) route "
+            f"to {target_norm}.",
+        }
+
+    attempts: list[dict[str, Any]] = []
+    for cand in candidates[:max_attempts]:
+        base_cfg = _NODES[cand.via_node]
+        xn = open_dynamic_chain(base_cfg, cand.connect_chain, cand.target)
+        try:
+            await xn.connect()
+        except (XnetError, ConnectionError, OSError, asyncio.TimeoutError) as e:
+            attempts.append({"via": cand.via_node, "ok": False, "error": str(e)})
+            await xn.disconnect()
+            continue
+        try:
+            family = await xn.probe_family()
+            output = await xn.run_command(cmd, idle_ms=idle_ms)
+            attempts.append({"via": cand.via_node, "ok": True})
+            result: dict[str, Any] = {
+                "target": cand.target,
+                "found": True,
+                "connected_via": cand.via_node,
+                "family": family,
+                "source": cand.source,
+                "hops": cand.hops,
+                "flexnet_cost": cand.flexnet_cost,
+                "netrom_quality": cand.netrom_quality,
+                "attempts": attempts,
+                "command": cmd,
+                "output": output,
+            }
+            structured = _structured_for(cmd, output)
+            if structured is not None:
+                result["structured"] = structured
+            return result
+        finally:
+            await xn.disconnect()
+
+    return {
+        "target": target_norm,
+        "found": True,
+        "connected": False,
+        "attempts": attempts,
+        "note": f"Found {len(candidates)} route(s) but none connected within "
+        f"{max_attempts} attempt(s).",
+    }
 
 
 def _http_allowed(

@@ -33,7 +33,9 @@ knowledge in code**: the node inventory and secrets are entirely configuration.
 | `transports/xnet.py` | Base transport: (optional SSH) telnet, login, read, `SYS` elevation |
 | `transports/bpq.py` | BPQ32/LinBPQ transport: `PASSWORD` elevation |
 | `transports/chained.py` | AX.25 chained transport: outer → `C <inner>` → inner |
-| `transports/__init__.py` | `open_transport()` factory (type → transport class) |
+| `transports/family.py` | Recognise the node family (xnet/bpq/pcf) from MOTD or `V` |
+| `transports/__init__.py` | `open_transport()` + `open_dynamic_chain()` factories |
+| `discovery.py` | On-demand route discovery across `D`/`N` tables (ranked candidates) |
 | `commands.py` | Command syntax tables + callsign validation |
 | `parsers.py` | Tolerant parsers: raw command text → typed records (JSON) |
 | `safety.py` | Dangerous-command classifier (the confirmation gate) |
@@ -129,6 +131,29 @@ raise). The target has **no separate login** — the AX.25 SABM carries the base
 user identity through. SYS elevation targets the **target** node's password.
 Teardown sends `BYE` (innermost) then lets the base class `BYE`/close; intermediate
 hops fall back on their inactivity timeout.
+
+### 5.4 On-demand route discovery (`discovery.py` + `remote_run`)
+Statically-chained nodes above must be pre-declared. `remote_run` removes that
+requirement: it reaches a target that is **not** in `nodes.yaml` by discovering a
+route at call time (nothing pre-scanned, nothing persisted).
+
+`discovery.discover_routes(target, all_nodes, run_user)`:
+1. **Consult** every configured console node (`xnet`/`bpq`/`linbpq`) concurrently,
+   reading only two tables — FlexNet destinations `D <call>` (cost) and NetROM
+   route detail `N <call>` (quality + hops). Link tables (`L`) are deliberately
+   **not** used. A bare-token target is first resolved from the NODES alias map.
+2. **Rank** all matches into ONE list by `_rank_key = (metric, hops)` ascending —
+   lower cost/metric then fewer hops wins. FlexNet cost is used directly; NetROM
+   quality is inverted onto the same lower-is-better axis. `_rank_key` /
+   `RouteCandidate.sort_metric()` is the single, documented, tunable place for the
+   ranking scale (flip there if a live capture shows a different preference).
+
+`remote_run` then connects best-first via `open_dynamic_chain()` (which synthesises
+an ephemeral `xnet_chained` config and reuses `Ax25ChainedTransport`), **falling
+back** to the next candidate on connect failure. On success it calls
+`transport.probe_family()` — `detect_family()` on the captured MOTD, falling back
+to the `V` version command — then runs the (user-mode) command verbatim in that
+family's command set and attaches a structured parse when one exists for the verb.
 
 ---
 

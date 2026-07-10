@@ -101,7 +101,10 @@ class Ax25ChainedTransport(XnetTransport):
                         f"hop {i} ({cmd!r}): {buf!r}"
                     )
                 # Drain any motd/banner from this hop before the next command.
-                await self._read_until_idle(idle_ms=600, max_wait_s=10.0)
+                # The last hop's banner is the TARGET's MOTD — keep it for family
+                # recognition (see probe_family / detect_family).
+                drain = await self._read_until_idle(idle_ms=600, max_wait_s=10.0)
+                self.motd = buf.decode("latin-1", errors="replace") + drain
         logger.info(
             "%s reachable via %s",
             self.target_config.callsign,

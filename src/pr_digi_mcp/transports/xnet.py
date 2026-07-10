@@ -25,6 +25,7 @@ import asyncssh
 
 from ..config import NodeConfig
 from ..credentials import get_password
+from .family import detect_family
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,9 @@ class XnetTransport:
         self._writer: asyncssh.SSHWriter[bytes] | asyncio.StreamWriter | None = None
         self._sys_active: bool = False
         self._lock = asyncio.Lock()  # serialises send/receive on this session
+        # Connect banner / MOTD captured on connect, for family recognition.
+        self.motd: str = ""
+        self.family: str | None = None
 
     async def __aenter__(self) -> XnetTransport:
         await self.connect()
@@ -114,6 +118,24 @@ class XnetTransport:
                 self.config.telnet_host, self.config.telnet_port
             )
         await self._login()
+
+    async def probe_family(self) -> str:
+        """Recognise the node family from the MOTD, falling back to the `V` command.
+
+        Returns one of "xnet" | "bpq" | "pcf" | "unknown" and caches it on
+        `self.family`. Best-effort: a failed `V` probe yields "unknown" rather
+        than raising, so a caller can still run generic single-letter commands.
+        """
+        fam = detect_family(self.motd)
+        if fam is None:
+            try:
+                ver = await self.run_command("V", idle_ms=600, max_wait_s=8.0)
+                fam = detect_family(ver)
+            except (XnetError, ConnectionError, OSError, asyncio.TimeoutError) as e:
+                logger.debug("%s: V family-probe failed: %s", self.config.callsign, e)
+        self.family = fam or "unknown"
+        logger.info("%s: family detected as %s", self.config.callsign, self.family)
+        return self.family
 
     async def disconnect(self) -> None:
         """Send `BYE` and tear down the SSH + telnet channels."""
