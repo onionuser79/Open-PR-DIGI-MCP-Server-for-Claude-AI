@@ -68,3 +68,18 @@ nodes:
     connect_command: "C N0CALL-99"
     sys_required: true
     description: "PC/Flexnet node — 2 hops (via N0CALL-14 -> N0CALL-12)"
+
+  # --- Island-interconnect gateway ---
+  #   A gateway that links a whole external network (e.g. another country's
+  #   FlexNet fabric) but advertises ONLY ITSELF to its neighbour — its
+  #   downstream destinations are NOT re-exported. Automatic route discovery
+  #   therefore sees just a cost-1 "self" entry and cannot reach it. Register
+  #   it explicitly as xnet_chained so tools can run `D` / `N` etc. ON it and
+  #   enumerate the full island behind it.
+  IGATE:
+    type: xnet_chained
+    transit_via: N0CALL-14       # the neighbour that carries the cost-1 self route
+    connect_command: "C IGATE"
+    login_required: false        # open gateway — connects straight to the prompt
+    sys_required: false          # read-only (D/N); no SYS on a foreign gateway
+    description: "(X)Net island-interconnect gateway — chained via N0CALL-14"
