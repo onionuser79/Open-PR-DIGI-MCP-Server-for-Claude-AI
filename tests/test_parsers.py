@@ -92,6 +92,30 @@ def test_parse_bpq_flexnet_links() -> None:
     assert fl[0].callsign == "IW2OHX-14" and fl[0].port == 3
     assert fl[0].status == "CONNECTED" and fl[0].routes == 116
     assert fl[0].keepalives == 389 and fl[0].uptime == "20:24:20"
+    assert fl[0].link_quality is None
+
+
+FL_QT = """BPQBOL:IW2OHX-13} FlexNet Links:
+Link         Port  Status     LT     Q/T   KA     Uptime      Routes
+------------ ----  ---------  ------ ----- -----  ----------  ------
+IR2UFV       5     CONNECTED  0.5s   1     2414   4d 17:14    8
+IW2OHX-14    3     CONNECTED  0.0s   3     2156   4d 17:14    209
+IW2OHX-12    2     CONNECTED  0.5s   -     12     00:00:41    0
+"""
+
+
+def test_parse_bpq_flexnet_links_qt_and_days() -> None:
+    fl = parse_bpq_flexnet_links(FL_QT)
+    assert [f.callsign for f in fl] == ["IR2UFV", "IW2OHX-14", "IW2OHX-12"]
+    assert fl[1].link_quality == 3 and fl[1].keepalives == 2156
+    assert fl[1].uptime == "4d 17:14" and fl[1].routes == 209
+    assert fl[2].link_quality is None and fl[2].keepalives == 12
+
+
+def test_parse_bpq_flexnet_links_old_build_with_days() -> None:
+    old = FL.replace("20:24:20", "4d 17:14")
+    fl = parse_bpq_flexnet_links(old)
+    assert len(fl) == 2 and fl[0].keepalives == 389 and fl[0].link_quality is None
 
 
 def test_parse_bpq_flexnet_destinations() -> None:

@@ -119,10 +119,13 @@ def parse_bpq_links(text: str) -> list[BpqLink]:
 
 
 # ── BPQ FlexNet FL links ────────────────────────────────────────────────────
-# e.g. "IW2OHX-14    3     CONNECTED  60s    389    20:24:20    116"
+# e.g. "IW2OHX-14    3     CONNECTED  0.5s   3     389    4d 17:14    116"
+# Q/T (after LT) is our own link time in (X)Net's unit, 100 ms ticks or "-";
+# builds before it have no such column, so it is optional.
 _BPQ_FL = re.compile(
     r"^\s*(?P<call>[A-Z0-9]+(?:-\d+)?)\s+(?P<port>\d+)\s+(?P<status>[A-Z]+)\s+"
-    r"(?P<lt>\S+)\s+(?P<ka>\d+)\s+(?P<uptime>[\d:]+)\s+(?P<routes>\d+)\s*$"
+    r"(?P<lt>\S+)\s+(?:(?P<qt>\d+|-)\s+)?(?P<ka>\d+)\s+"
+    r"(?P<uptime>(?:\d+d\s+)?\d+:\d+(?::\d+)?)\s+(?P<routes>\d+)\s*$"
 )
 
 
@@ -135,6 +138,7 @@ class FlexnetLink:
     keepalives: int
     uptime: str
     routes: int
+    link_quality: int | None = None
 
 
 def parse_bpq_flexnet_links(text: str) -> list[FlexnetLink]:
@@ -152,6 +156,7 @@ def parse_bpq_flexnet_links(text: str) -> list[FlexnetLink]:
                 keepalives=int(m["ka"]),
                 uptime=m["uptime"],
                 routes=int(m["routes"]),
+                link_quality=int(m["qt"]) if m["qt"] and m["qt"] != "-" else None,
             )
         )
     return out
