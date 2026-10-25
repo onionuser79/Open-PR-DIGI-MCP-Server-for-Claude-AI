@@ -202,7 +202,7 @@ table / path** (FlexNet's signature routing view) · `F <call>` find · `H` help
 ### BPQ FlexNet — LinBPQ only (2)
 | Tool | Command | Action |
 |------|---------|--------|
-| `bpq_flexnet_links` | `FL` | FlexNet links: LT (neighbour-reported), Q/T (own link time, (X)Net unit), KA, uptime, routes; sessions, parser, transit counters |
+| `bpq_flexnet_links` | `FL` | (X)Net `L`-style link table (Q/I/F rows: dst, Q/T, rtt, connect, tx/rx, txq/rxq, rr+%, bit/s; v2.9.0+), then FlexNet links: LT (neighbour-reported), Own (own link time, (X)Net unit), KA, uptime, routes; sessions, parser, transit counters |
 | `bpq_flexnet_destinations` | `D [query]` | FlexNet destinations (+ per-callsign query) |
 
 ### BPQ — routing (3)

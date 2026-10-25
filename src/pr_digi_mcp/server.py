@@ -453,10 +453,15 @@ async def bpq_flexnet_links(
 ) -> str:
     """Show the FlexNet links — `FL` (linbpq-flexnet).
 
-    Per-neighbour table: Link, Port, Status (CONNECTED/INIT/PENDING),
-    LT (link time the NEIGHBOUR reports, seconds), Q/T (this node's own
-    smoothed link time in (X)Net's L unit, 100 ms ticks, '-' until measured;
-    newer builds only), KA (keepalives received), Uptime (FlexNet session),
+    v2.9.0+ builds open with a link table laid out as (X)Net's `L`: one row
+    per protocol on a link (Q = NET/ROM quality, I = INP3, F = FlexNet),
+    dst, Q/T, rtt own/peer in 100 ms ticks, queued frames, connect time,
+    tx/rx bytes, txq/rxq, rr+% and bit/s. Read it like (X)Net's `L`.
+
+    Then the per-neighbour FlexNet table: Link, Port, Status
+    (CONNECTED/INIT/PENDING), LT (link time the NEIGHBOUR reports, seconds),
+    Own (this node's own smoothed link time, 100 ms ticks, '-' until
+    measured; headed Q/T on v2.8.2), KA (keepalives received), Uptime (FlexNet session),
     Routes (D-table destinations whose next hop is this neighbour). Then the
     Sessions:/Parser: lines and, when configured, link options, KISS links,
     local calls and the transit section (L2/path forwarding counters, peer

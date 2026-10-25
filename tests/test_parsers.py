@@ -112,6 +112,29 @@ def test_parse_bpq_flexnet_links_qt_and_days() -> None:
     assert fl[2].link_quality is None and fl[2].keepalives == 12
 
 
+# v2.9.0+: an (X)Net L-style table (Q/I/F rows) comes first; the detail
+# table keeps its row layout, its Q/T header cell renamed to Own.
+FL_XNET_TABLE = """Link to       dst  Q/T    rtt    tx connect   tx   rx   txq/rxq  rr+%  bit/s
+
+ 2:N0CALL-12    3 Q 161   -/-     0  0m 04s  529  1.5K  100/100   0.0   4212
+ 4:N0CALL-15   18 I   1   1/-     0  4m 11s  6.7K 745   100/100  71.1    238
+ 2:N0CALL-12   97 F   4   2/5     0  0m 04s  529  1.5K  100/100   0.0   4212
+ 7:N0CALL-4          F   -   -/-     -  - - -     -    -     -/-     -.-      -
+
+FlexNet Links:
+Link         Port  Status     LT     Own   KA     Uptime      Routes
+------------ ----  ---------  ------ ----- -----  ----------  ------
+N0CALL-12    2     CONNECTED  0.5s   2     2      00:00:03    97
+"""
+
+
+def test_parse_bpq_flexnet_links_ignores_xnet_style_table() -> None:
+    fl = parse_bpq_flexnet_links(FL_XNET_TABLE)
+    assert len(fl) == 1
+    assert fl[0].callsign == "N0CALL-12" and fl[0].routes == 97
+    assert fl[0].link_quality == 2 and fl[0].keepalives == 2
+
+
 def test_parse_bpq_flexnet_links_old_build_with_days() -> None:
     old = FL.replace("20:24:20", "4d 17:14")
     fl = parse_bpq_flexnet_links(old)
