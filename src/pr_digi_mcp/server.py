@@ -458,7 +458,8 @@ async def bpq_flexnet_links(
     dst, Q/T, rtt own/peer in 100 ms ticks, queued frames, connect time,
     tx/rx bytes, txq/rxq, rr+% and bit/s. Read it like (X)Net's `L`.
 
-    Then the per-neighbour FlexNet table: Link, Port, Status
+    Sends `FL +`: on v2.9.0+ a bare `FL` stops after that table; older
+    builds ignore the `+`. Then the per-neighbour FlexNet table: Link, Port, Status
     (CONNECTED/INIT/PENDING), LT (link time the NEIGHBOUR reports, seconds),
     Own (this node's own smoothed link time, 100 ms ticks, '-' until
     measured; headed Q/T on v2.8.2), KA (keepalives received), Uptime (FlexNet session),
@@ -468,7 +469,7 @@ async def bpq_flexnet_links(
     table). Field reference: linbpq-flexnet README, "FL — FlexNet links".
     Only on linbpq-flexnet builds (your LinBPQ nodes).
     """
-    return await _run_sys(_get_linbpq_node(node), "FL", idle_ms=800)
+    return await _run_sys(_get_linbpq_node(node), "FL +", idle_ms=800)
 
 
 @mcp.tool()
